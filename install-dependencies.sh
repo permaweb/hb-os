@@ -161,7 +161,7 @@ LIBSLIRP_DEV_VERS=$(dpkg -l | grep libslirp-dev | awk '{ print $3 }')
 
 if [[ $LIBSLIRP_VERS != 4.7.0* ]]; then
 	info "Installing libslirp0 4.7.0"
-	wget -nv http://se.archive.ubuntu.com/ubuntu/pool/main/libs/libslirp/libslirp0_4.7.0-1_amd64.deb -O libslirp0.deb
+	wget -nv http://archive.ubuntu.com/ubuntu/pool/main/libs/libslirp/libslirp0_4.7.0-1ubuntu3_amd64.deb -O libslirp0.deb
 	sudo dpkg -i libslirp0.deb
 	rm -rf libslirp0.deb
 else
@@ -170,7 +170,7 @@ fi
 
 if [[ $LIBSLIRP_DEV_VERS != 4.7.0* ]]; then
 	info "Installing libslirp-dev 4.7.0"
-	wget -nv http://se.archive.ubuntu.com/ubuntu/pool/main/libs/libslirp/libslirp-dev_4.7.0-1_amd64.deb -O libslirp-dev.deb
+	wget -nv http://archive.ubuntu.com/ubuntu/pool/main/libs/libslirp/libslirp-dev_4.7.0-1ubuntu3_amd64.deb -O libslirp-dev.deb
 	sudo dpkg -i libslirp-dev.deb
 	rm -rf libslirp-dev.deb
 else
