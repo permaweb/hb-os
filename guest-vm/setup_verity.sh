@@ -23,28 +23,13 @@ BUILD_DIR=$SCRIPT_PATH/../build
 trap clean_up EXIT
 
 prepare_verity_fs() {
-	# # removing SSH keys: they will be regenerated later
-	# sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+	# removing SSH keys: they will be regenerated later
+	sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
 
-	# Removing SSH keys and configuration
-    echo "Removing SSH keys and configuration.."
-    sudo rm -rf $DST_FOLDER/etc/ssh
-    sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
-    sudo rm -rf $DST_FOLDER/home/*/.ssh
-
-	# Remove SSH-related binaries
-	echo "Removing SSH binaries.."
-	sudo rm -f $DST_FOLDER/usr/bin/ssh* $DST_FOLDER/usr/bin/scp
-	sudo rm -f $DST_FOLDER/usr/sbin/sshd
-
-    # Remove TTY-related configurations
-    echo "Removing TTY configurations.."
-    sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
-    sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
-
-    # Remove TTY devices
-    echo "Removing TTY devices.."
-    sudo rm -f $DST_FOLDER/dev/tty*
+	# Disable SSH service
+    echo "Disabling SSH service..."
+    sudo chroot $DST_FOLDER systemctl disable ssh.service
+    sudo chroot $DST_FOLDER systemctl mask ssh.service
 
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
@@ -140,3 +125,41 @@ sudo veritysetup format $DST_DEVICE $HASH_TREE | grep Root | cut -f2 > $ROOT_HAS
 echo "Root hash: `cat $ROOT_HASH`"
 
 echo "All done!"
+
+	# # # removing SSH keys: they will be regenerated later
+	# sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+
+    # # Disable SSH service
+    # echo "Disabling SSH service..."
+    # sudo chroot $DST_FOLDER systemctl disable ssh.service
+    # sudo chroot $DST_FOLDER systemctl mask ssh.service
+
+	# # Removing SSH keys and configuration
+	# echo "Clearing authorized keys..."
+	# sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
+	# sudo rm -rf $DST_FOLDER/home/*/.ssh
+
+    # # Block SSH port with iptables
+    # echo "Blocking SSH port 22..."
+    # sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
+    # sudo chroot $DST_FOLDER iptables-save > /etc/iptables/rules.v4
+
+    # # Remove shell binaries
+    # echo "Removing shell binaries..."
+    # sudo rm -f $DST_FOLDER/bin/bash
+    # sudo rm -f $DST_FOLDER/bin/sh
+    # sudo rm -f $DST_FOLDER/usr/bin/dash
+    # sudo rm -f $DST_FOLDER/usr/bin/zsh
+    # sudo rm -f $DST_FOLDER/usr/bin/ksh
+
+    # # Disable TTY access
+    # echo "Disabling TTY access..."
+    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
+    # sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
+    # sudo rm -f $DST_FOLDER/dev/tty*
+
+    # # Change default login shell to /bin/false
+    # echo "Changing default shell for all users..."
+    # sudo sed -i 's#/bin/bash#/bin/false#g' $DST_FOLDER/etc/passwd
+    # sudo sed -i 's#/bin/sh#/bin/false#g' $DST_FOLDER/etc/passwd
+

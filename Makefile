@@ -14,8 +14,8 @@ KERNEL_DIR        ?= $(BUILD_DIR)/kernel
 KERNEL            ?= $(KERNEL_DIR)/boot/vmlinuz-*
 INITRD            ?= $(BUILD_DIR)/initramfs.cpio.gz
 ROOT              ?= /dev/sda
-# KERNEL_CMDLINE    ?= console=ttyS0 earlyprintk=serial root=$(ROOT)
-KERNEL_CMDLINE    ?= root=$(ROOT)
+KERNEL_CMDLINE    ?= console=ttyS0 earlyprintk=serial root=$(ROOT)
+# KERNEL_CMDLINE    ?= root=$(ROOT)
 
 MEMORY            ?= 4096
 CPUS			  ?= 1
