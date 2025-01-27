@@ -1,0 +1,8 @@
+[Unit]
+Description=Permaweb Node
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hb/bin/hb foreground
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target

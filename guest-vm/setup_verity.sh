@@ -16,6 +16,9 @@ NON_INTERACTIVE=""
 
 SCRIPT_PATH=$(realpath `dirname $0`)
 . $SCRIPT_PATH/common.sh
+. $SCRIPT_PATH/hb/release.sh
+
+BUILD_DIR=$SCRIPT_PATH/../build
 
 trap clean_up EXIT
 
@@ -91,6 +94,18 @@ sudo mount $DST_DEVICE $DST_FOLDER
 
 echo "Copying files (this may take some time).."
 copy_filesystem
+
+echo "Build HyperBEAM.."
+build_and_copy_hb
+
+echo "Copying HyperBEAM.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
+
+echo "Copy HyperBEAM service.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+
+echo "Enabling HyperBEAM service.."
+sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
 
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs
