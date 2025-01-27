@@ -23,8 +23,28 @@ BUILD_DIR=$SCRIPT_PATH/../build
 trap clean_up EXIT
 
 prepare_verity_fs() {
-	# removing SSH keys: they will be regenerated later
-	sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+	# # removing SSH keys: they will be regenerated later
+	# sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+
+	# Removing SSH keys and configuration
+    echo "Removing SSH keys and configuration.."
+    sudo rm -rf $DST_FOLDER/etc/ssh
+    sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
+    sudo rm -rf $DST_FOLDER/home/*/.ssh
+
+	# Remove SSH-related binaries
+	echo "Removing SSH binaries.."
+	sudo rm -f $DST_FOLDER/usr/bin/ssh* $DST_FOLDER/usr/bin/scp
+	sudo rm -f $DST_FOLDER/usr/sbin/sshd
+
+    # Remove TTY-related configurations
+    echo "Removing TTY configurations.."
+    sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
+    sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
+
+    # Remove TTY devices
+    echo "Removing TTY devices.."
+    sudo rm -f $DST_FOLDER/dev/tty*
 
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp

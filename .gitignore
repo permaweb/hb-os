@@ -1,5 +1,4 @@
 build/*
-!/build/snp-release
 
 .cache/
 tools/attestation_server/target
