@@ -35,6 +35,44 @@ prepare_verity_fs() {
     echo "Disabling login for all users except root..."
     sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
 
+
+    # Disable all TTY services (tty1 through tty6)
+	echo "Disabling all TTY services..."
+	for i in {1..6}; do
+		sudo chroot $DST_FOLDER systemctl disable getty@tty$i.service
+		sudo chroot $DST_FOLDER systemctl mask getty@tty$i.service
+	done
+
+	# Disable serial console (ttyS0)
+	echo "Disabling serial console (ttyS0)..."
+	sudo chroot $DST_FOLDER systemctl disable serial-getty@ttyS0.service
+	sudo chroot $DST_FOLDER systemctl mask serial-getty@ttyS0.service
+
+	# Remove TTY kernel console configuration (GRUB)
+	if [ -f "$DST_FOLDER/etc/default/grub" ]; then
+		echo "Removing TTY kernel console configuration from GRUB..."
+		sudo sed -i 's/console=.*//g' $DST_FOLDER/etc/default/grub
+		sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=none"/' $DST_FOLDER/etc/default/grub
+	fi
+
+	# Ensure no TTY devices are active at runtime
+	echo "Disabling TTY devices..."
+	for dev in tty tty0 tty1 tty2 tty3 tty4 tty5 tty6 ttyS0; do
+		if [ -e "$DST_FOLDER/dev/$dev" ]; then
+			sudo mv $DST_FOLDER/dev/$dev $DST_FOLDER/dev/${dev}_disabled || true
+		fi
+	done
+
+	# Disable kernel messages to console
+	echo "Disabling kernel messages to console..."
+	sudo chroot $DST_FOLDER dmesg --console-off || true
+
+	# # Ensure no shell is accessible by default
+	# echo "Disabling default shell access..."
+	# echo '/usr/sbin/nologin' | sudo tee $DST_FOLDER/etc/shells >/dev/null
+
+	echo "Black box preparation complete. No TTY or console interfaces are accessible."
+
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
 
@@ -45,6 +83,8 @@ prepare_verity_fs() {
 
 	# create new home, etc, var dirs (original will be mounted as R/W tmpfs)
 	sudo mkdir -p $DST_FOLDER/home $DST_FOLDER/etc $DST_FOLDER/var $DST_FOLDER/tmp
+
+
 }
 
 usage() {
@@ -116,45 +156,9 @@ sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.servi
 echo "Enabling HyperBEAM service.."
 sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
 
+
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs
-
-echo "Disabling getty on ttyS0..."
-
-echo "Masking all getty services to disable login prompts..."
-
-# Disable and mask getty services on all TTYs
-sudo chroot $DST_FOLDER systemctl disable getty.target
-sudo chroot $DST_FOLDER systemctl mask getty.target
-
-echo "Overriding getty services..."
-sudo mkdir -p $DST_FOLDER/etc/systemd/system/getty@.service.d
-sudo tee $DST_FOLDER/etc/systemd/system/getty@.service.d/override.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/bin/false
-EOF
-
-sudo mkdir -p $DST_FOLDER/etc/systemd/system/serial-getty@.service.d
-sudo tee $DST_FOLDER/etc/systemd/system/serial-getty@.service.d/override.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/bin/false
-EOF
-
-sudo mkdir -p $DST_FOLDER/etc/systemd
-sudo tee $DST_FOLDER/etc/systemd/logind.conf <<EOF
-[Login]
-NAutoVTs=0
-ReserveVT=0
-EOF
-
-
-echo "Disabling TTY access..."
-sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
-sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
-sudo rm -f $DST_FOLDER/dev/tty*
-
 
 echo "Unmounting images.."
 sudo umount -q "$SRC_FOLDER"
