@@ -109,12 +109,12 @@ boot_verity() {
     rsync -paxHAWXS $MNT_DIR/etc_ro/ $MNT_DIR/etc/
     rsync -paxHAWXS $MNT_DIR/var_ro/ $MNT_DIR/var/
 
-    # generate new SSH key for SSH server
-    ssh-keygen -t ecdsa -f $MNT_DIR/etc/ssh/ssh_host_ecdsa_key -N "" >/dev/null 2>&1
+    # # generate new SSH key for SSH server
+    # ssh-keygen -t ecdsa -f $MNT_DIR/etc/ssh/ssh_host_ecdsa_key -N "" >/dev/null 2>&1
 
-    # generate attestation report with SSH fingerprint as user data
-    FINGERPRINT=`ssh-keygen -lf $MNT_DIR/etc/ssh/ssh_host_ecdsa_key.pub | awk '{ print $2 }' | cut -d ":" -f 2`
-    /bin/get_report --report-data $FINGERPRINT --out $MNT_DIR/etc/report.json
+    # # generate attestation report with SSH fingerprint as user data
+    # FINGERPRINT=`ssh-keygen -lf $MNT_DIR/etc/ssh/ssh_host_ecdsa_key.pub | awk '{ print $2 }' | cut -d ":" -f 2`
+    # /bin/get_report --report-data $FINGERPRINT --out $MNT_DIR/etc/report.json
 }
 
 #default launch config for sev uses virto as device driver

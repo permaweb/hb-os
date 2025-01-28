@@ -1,4 +1,5 @@
-build
+build/*
+
 .cache/
 tools/attestation_server/target
 AMDSEV/
