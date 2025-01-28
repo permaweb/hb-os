@@ -1,8 +1,11 @@
 [Unit]
 Description=Permaweb Node
+
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/hb/bin/hb foreground
+Environment=HB_PRINT=http,debug,dev_snp
+ExecStart=/usr/local/bin/hb/bin/hb foreground eval "hb_http_server:start_test_node(#{ port => 8735, operator => unclaimed })."
 Restart=on-failure
+
 [Install]
 WantedBy=multi-user.target
