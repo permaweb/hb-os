@@ -31,6 +31,36 @@ prepare_verity_fs() {
     sudo chroot $DST_FOLDER systemctl disable ssh.service
     sudo chroot $DST_FOLDER systemctl mask ssh.service
 
+    # Clear authorized keys
+    echo "Clearing authorized keys..."
+    sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
+    sudo rm -rf $DST_FOLDER/home/*/.ssh
+    sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+
+    # Block SSH port with iptables
+    echo "Blocking SSH port 22..."
+    sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
+
+    # Remove unnecessary shell binaries (but keep essential ones for services like hyperbeam)
+    echo "Removing unnecessary shell binaries..."
+    sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
+    sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
+
+    # Disable TTY access
+    echo "Disabling TTY access..."
+    sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
+    sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
+    sudo rm -f $DST_FOLDER/dev/tty*
+
+    # Change default login shell to /usr/sbin/nologin for all users
+    echo "Changing default shell for all users..."
+    sudo sed -i 's#/bin/bash#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+    sudo sed -i 's#/bin/sh#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+
+    # Allow specific shell for hyperbeam (if required)
+    echo "Allowing shell for hyperbeam service user..."
+    sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
+
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
 

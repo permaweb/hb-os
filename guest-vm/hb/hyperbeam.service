@@ -4,5 +4,11 @@ Description=Permaweb Node
 Type=simple
 ExecStart=/usr/local/bin/hb/bin/hb foreground
 Restart=on-failure
+User=hyperbeam
+Group=hyperbeam
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
