@@ -31,35 +31,9 @@ prepare_verity_fs() {
     sudo chroot $DST_FOLDER systemctl disable ssh.service
     sudo chroot $DST_FOLDER systemctl mask ssh.service
 
-    # Clear authorized keys
-    echo "Clearing authorized keys..."
-    sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
-    sudo rm -rf $DST_FOLDER/home/*/.ssh
-    sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
-
-    # Block SSH port with iptables
-    echo "Blocking SSH port 22..."
-    sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
-
-    # Remove unnecessary shell binaries (but keep essential ones for services like hyperbeam)
-    echo "Removing unnecessary shell binaries..."
-    sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
-    sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
-
-    # Disable TTY access
-    echo "Disabling TTY access..."
-    sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
-    sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
-    sudo rm -f $DST_FOLDER/dev/tty*
-
-    # Change default login shell to /usr/sbin/nologin for all users
-    echo "Changing default shell for all users..."
-    sudo sed -i 's#/bin/bash#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-    sudo sed -i 's#/bin/sh#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-
-    # Allow specific shell for hyperbeam (if required)
-    echo "Allowing shell for hyperbeam service user..."
-    sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
+    # Disable login for all users except root
+    echo "Disabling login for all users except root..."
+    sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
 
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
@@ -145,6 +119,43 @@ sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs
 
+echo "Disabling getty on ttyS0..."
+
+echo "Masking all getty services to disable login prompts..."
+
+# Disable and mask getty services on all TTYs
+sudo chroot $DST_FOLDER systemctl disable getty.target
+sudo chroot $DST_FOLDER systemctl mask getty.target
+
+echo "Overriding getty services..."
+sudo mkdir -p $DST_FOLDER/etc/systemd/system/getty@.service.d
+sudo tee $DST_FOLDER/etc/systemd/system/getty@.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/bin/false
+EOF
+
+sudo mkdir -p $DST_FOLDER/etc/systemd/system/serial-getty@.service.d
+sudo tee $DST_FOLDER/etc/systemd/system/serial-getty@.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/bin/false
+EOF
+
+sudo mkdir -p $DST_FOLDER/etc/systemd
+sudo tee $DST_FOLDER/etc/systemd/logind.conf <<EOF
+[Login]
+NAutoVTs=0
+ReserveVT=0
+EOF
+
+
+echo "Disabling TTY access..."
+sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
+sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
+sudo rm -f $DST_FOLDER/dev/tty*
+
+
 echo "Unmounting images.."
 sudo umount -q "$SRC_FOLDER"
 sudo umount -q "$DST_FOLDER"
@@ -193,3 +204,72 @@ echo "All done!"
     # sudo sed -i 's#/bin/bash#/bin/false#g' $DST_FOLDER/etc/passwd
     # sudo sed -i 's#/bin/sh#/bin/false#g' $DST_FOLDER/etc/passwd
 
+
+    # # Clear authorized keys
+    # echo "Clearing authorized keys..."
+    # sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
+    # sudo rm -rf $DST_FOLDER/home/*/.ssh
+    # sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
+
+    # # Block SSH port with iptables
+    # echo "Blocking SSH port 22..."
+    # sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
+
+    # # Remove unnecessary shell binaries (but keep essential ones for services like hyperbeam)
+    # echo "Removing unnecessary shell binaries..."
+    # sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
+    # sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
+
+    # # Disable TTY access
+    # echo "Disabling TTY access..."
+    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
+    # sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
+    # sudo rm -f $DST_FOLDER/dev/tty*
+
+    # # Change default login shell to /usr/sbin/nologin for all users
+    # echo "Changing default shell for all users..."
+    # sudo sed -i 's#/bin/bash#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+    # sudo sed -i 's#/bin/sh#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+
+    # # Allow specific shell for hyperbeam (if required)
+    # echo "Allowing shell for hyperbeam service user..."
+    # sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
+
+		# sudo chroot $DST_FOLDER
+	# getent passwd hyperbeam
+	# getent group hyperbeam
+	# exit
+
+    # Remove ALL shell binaries (bash/sh) for non-hyperbeam users
+    # echo "Disabling shell binaries..."
+    # sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
+    # sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
+    # sudo mv $DST_FOLDER/usr/bin/bash $DST_FOLDER/usr/bin/bash_disabled 2>/dev/null || true
+    # sudo mv $DST_FOLDER/usr/bin/sh $DST_FOLDER/usr/bin/sh_disabled 2>/dev/null || true
+
+    # Disable TTY logins
+    # echo "Disabling TTY access..."
+    # sudo rm -f $DST_FOLDER/etc/securetty  # Remove list of allowed TTY devices
+    # sudo rm -f $DST_FOLDER/dev/tty*       # Remove TTY devices
+    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null  # Disable TTY in inittab
+
+    # Force ALL users to use /usr/sbin/nologin (including root)
+    # echo "Changing all user shells to nologin..."
+    # sudo sed -i 's#\(.*:.*:\)/bin/bash#\1/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+    # sudo sed -i 's#\(.*:.*:\)/bin/sh#\1/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
+
+#    # Ensure hyperbeam user and group exist
+#     echo "Ensuring hyperbeam user and group exist..."
+# 	sudo chroot $DST_FOLDER groupadd -g 1001 hyperbeam || true
+# 	sudo chroot $DST_FOLDER useradd -u 1001 -g 1001 -d /home/hyperbeam -s /bin/bash hyperbeam || true
+
+    # # Explicitly allow ONLY the hyperbeam user
+    # echo "Allowing shell access for hyperbeam user..."
+    # sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
+
+    # # Remove all home directories except hyperbeam
+    # echo "Cleaning home directories..."
+    # sudo find $DST_FOLDER/home/ -mindepth 1 -maxdepth 1 -not -name hyperbeam -exec rm -rf {} +
+	# Allow hyperbeam service to run without a shell
+    # echo "Configuring hyperbeam service permissions..."
+	# sudo chroot $DST_FOLDER chown -R 1001:1001 /usr/local/bin/hb

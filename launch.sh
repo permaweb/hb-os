@@ -57,6 +57,7 @@ usage() {
 	echo " -host-data         Path to file with 32-byte, base64 encoded blob for the \"HOST_DATA\" parameter in SNP_LAUNCH_FINISH"
 	echo " -policy            Guest Policy. 0x prefixed string. For SEV-SNP default is 0x30000 and 0xb0000 enables the debug API. For SEV-ES the default is 0x5 and 0x4 enables the debug API."
 	echo " -load-config PATH  Will load -bios,-smp,-kernel,-initrd,-append amd -policy from the VM config .toml file. You can still override this by passing the corresponding flag directly"
+	echo " -hb-port 		  Port for HyperBeam (default: 8734)"
 	exit 1
 }
 
@@ -191,6 +192,9 @@ while [ -n "$1" ]; do
 			shift
 			;;
 		-load-config) TOML_CONFIG="$2"
+			shift
+			;;
+		-hb-port) HB_PORT="$2"
 			shift
 			;;
  		*) 		usage
@@ -353,7 +357,7 @@ fi
 if [ "$USE_DEFAULT_NETWORK" = "1" ]; then
     #echo "guest port 22 is fwd to host 8000..."
 #    add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
-		add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:8080-:80,hostfwd=tcp:0.0.0.0:8877-:8734"
+		add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:8080-:80,hostfwd=tcp:0.0.0.0:${HB_PORT}-:8734"
 #    add_opts "-netdev user,id=vmnic"
     add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
 fi

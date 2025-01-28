@@ -54,6 +54,8 @@ VM_CONF_TEMPLATE   = $(GUEST_DIR)/vm-config-template.toml
 VM_CONFIG_FILE     = $(GUEST_DIR)/vm-config.toml
 VM_CONFIG_PARAMS   = -ovmf $(OVMF_PATH) -kernel $(KERNEL_PATH) -initrd $(INITRD_PATH) -template $(VM_CONF_TEMPLATE) -cpus $(CPUS) -policy $(POLICY)
 
+HB_PORT			   = 8734
+
 run:
 	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_EXTRA_PARAMS) -hda $(IMAGE_PATH)
 
@@ -68,7 +70,7 @@ run_sev_snp_direct_boot:
 
 run_verity_workflow:
 	./guest-vm/create-vm-config.sh $(VM_CONFIG_PARAMS) -cmdline "$(KERNEL_CMDLINE) $(VERITY_PARAMS)" -out $(VM_CONFIG_FILE)
-	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_SNP_PARAMS) -hda $(VERITY_IMAGE) -hdb $(VERITY_HASH_TREE) -load-config $(VM_CONFIG_FILE)
+	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_SNP_PARAMS) -hda $(VERITY_IMAGE) -hdb $(VERITY_HASH_TREE) -load-config $(VM_CONFIG_FILE) -hb-port $(HB_PORT)
 
 run_luks_workflow:
 	./guest-vm/create-vm-config.sh $(VM_CONFIG_PARAMS) -cmdline "$(KERNEL_CMDLINE) $(LUKS_PARAMS)" -out $(VM_CONFIG_FILE)
