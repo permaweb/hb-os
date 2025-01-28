@@ -58,6 +58,7 @@ usage() {
 	echo " -policy            Guest Policy. 0x prefixed string. For SEV-SNP default is 0x30000 and 0xb0000 enables the debug API. For SEV-ES the default is 0x5 and 0x4 enables the debug API."
 	echo " -load-config PATH  Will load -bios,-smp,-kernel,-initrd,-append amd -policy from the VM config .toml file. You can still override this by passing the corresponding flag directly"
 	echo " -hb-port 		  Port for HyperBeam (default: 8734)"
+	echo " -qemu-port 	   	  Port for QEMU monitor (default: 4444)"
 	exit 1
 }
 
@@ -195,6 +196,9 @@ while [ -n "$1" ]; do
 			shift
 			;;
 		-hb-port) HB_PORT="$2"
+			shift
+			;;
+		-qemu-port) QEMU_PORT="$2"
 			shift
 			;;
  		*) 		usage
@@ -449,7 +453,7 @@ fi
 # start monitor on pty and named socket 'monitor'
 add_opts "-monitor pty -monitor unix:${MONITOR_PATH},server,nowait"
 
-add_opts "-qmp tcp:localhost:4444,server,wait=off"
+add_opts "-qmp tcp:localhost:${QEMU_PORT},server,wait=off"
 
 # save the command line args into log file
 cat $QEMU_CMDLINE | tee ${QEMU_CONSOLE_LOG}
@@ -466,23 +470,17 @@ echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 echo "Mapping CTRL-C to CTRL-]"
 stty intr ^]
 
-# if [ -f "$TOML_CONFIG" ]; then
-#     echo "Launching QEMU as a background service..."
-
-#     # Run the QEMU command in the background with proper redirection
-#     bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
-#     sleep 1
-
-# 	echo "QEMU is running in the background."
-
-# else
-
-# fi
-
-echo "Launching VM normally..."
-echo "  $QEMU_CMDLINE"
-sleep 1
-bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+if [ -f "$TOML_CONFIG" ]; then
+    echo "Launching QEMU as a background service..."
+    bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+    sleep 1
+	echo "QEMU is running in the background."
+else
+	echo "Launching VM normally..."
+	echo "  $QEMU_CMDLINE"
+	sleep 1
+	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+fi
 
 # restore the mapping
 stty intr ^c

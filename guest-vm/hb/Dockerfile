@@ -46,7 +46,7 @@ RUN mkdir -p /build /release
 RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM
 
 # Compile the application code using Rebar3
-RUN cd /build/HyperBEAM && \
+RUN cd /build/HyperBEAM && git fetch && git checkout 04b0fae265edffa5a15917845d7390845e261f54 && \
     rebar3 release && \
     cp -r _build/default/rel/hb /release/hb && \
     mkdir -p /release/hb/test && \
