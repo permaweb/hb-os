@@ -22,50 +22,57 @@ BUILD_DIR=$SCRIPT_PATH/../build
 
 trap clean_up EXIT
 
+
 prepare_verity_fs() {
 	# removing SSH keys: they will be regenerated later
 	sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
 
-	# Disable SSH service
-    echo "Disabling SSH service..."
-    sudo chroot $DST_FOLDER systemctl disable ssh.service
-    sudo chroot $DST_FOLDER systemctl mask ssh.service
+    # If debug mode is disabled, perform black box preparation else print skipped message
+	if [ "$DEBUG" == "0" ]; then
 
-    # # Disable login for all users except root
-    # echo "Disabling login for all users except root..."
-    # sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
+		# Disable SSH service
+		echo "Disabling SSH service..."
+		sudo chroot $DST_FOLDER systemctl disable ssh.service
+		sudo chroot $DST_FOLDER systemctl mask ssh.service
 
-    # # Disable all TTY services (tty1 through tty6)
-	# echo "Disabling all TTY services..."
-	# for i in {1..6}; do
-	# 	sudo chroot $DST_FOLDER systemctl disable getty@tty$i.service
-	# 	sudo chroot $DST_FOLDER systemctl mask getty@tty$i.service
-	# done
+		# Disable login for all users except root
+		echo "Disabling login for all users except root..."
+		sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
 
-	# # Disable serial console (ttyS0)
-	# echo "Disabling serial console (ttyS0)..."
-	# sudo chroot $DST_FOLDER systemctl disable serial-getty@ttyS0.service
-	# sudo chroot $DST_FOLDER systemctl mask serial-getty@ttyS0.service
+		# Disable all TTY services (tty1 through tty6)
+		echo "Disabling all TTY services..."
+		for i in {1..6}; do
+			sudo chroot $DST_FOLDER systemctl disable getty@tty$i.service
+			sudo chroot $DST_FOLDER systemctl mask getty@tty$i.service
+		done
 
-	# # Remove TTY kernel console configuration (GRUB)
-	# if [ -f "$DST_FOLDER/etc/default/grub" ]; then
-	# 	echo "Removing TTY kernel console configuration from GRUB..."
-	# 	sudo sed -i 's/console=.*//g' $DST_FOLDER/etc/default/grub
-	# 	sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=none"/' $DST_FOLDER/etc/default/grub
-	# fi
+		# Disable serial console (ttyS0)
+		echo "Disabling serial console (ttyS0)..."
+		sudo chroot $DST_FOLDER systemctl disable serial-getty@ttyS0.service
+		sudo chroot $DST_FOLDER systemctl mask serial-getty@ttyS0.service
 
-	# # Ensure no TTY devices are active at runtime
-	# echo "Disabling TTY devices..."
-	# for dev in tty tty0 tty1 tty2 tty3 tty4 tty5 tty6 ttyS0; do
-	# 	if [ -e "$DST_FOLDER/dev/$dev" ]; then
-	# 		sudo mv $DST_FOLDER/dev/$dev $DST_FOLDER/dev/${dev}_disabled || true
-	# 	fi
-	# done
+		# Remove TTY kernel console configuration (GRUB)
+		if [ -f "$DST_FOLDER/etc/default/grub" ]; then
+			echo "Removing TTY kernel console configuration from GRUB..."
+			sudo sed -i 's/console=.*//g' $DST_FOLDER/etc/default/grub
+			sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=none"/' $DST_FOLDER/etc/default/grub
+		fi
 
-	# # Disable kernel messages to console
-	# echo "Disabling kernel messages to console..."
-	# sudo chroot $DST_FOLDER dmesg --console-off || true
-	# echo "Black box preparation complete. No TTY or console interfaces are accessible."
+		# Ensure no TTY devices are active at runtime
+		echo "Disabling TTY devices..."
+		for dev in tty tty0 tty1 tty2 tty3 tty4 tty5 tty6 ttyS0; do
+			if [ -e "$DST_FOLDER/dev/$dev" ]; then
+				sudo mv $DST_FOLDER/dev/$dev $DST_FOLDER/dev/${dev}_disabled || true
+			fi
+		done
+
+		# Disable kernel messages to console
+		echo "Disabling kernel messages to console..."
+		sudo chroot $DST_FOLDER dmesg --console-off || true
+		echo "Black box preparation complete. No TTY or console interfaces are accessible."
+	else
+		echo "Debug mode enabled. Skipping black box preparation."
+	fi
 
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
@@ -111,6 +118,9 @@ while [ -n "$1" ]; do
 		-out-root-hash) ROOT_HASH="$2"
 			shift
 			;;
+        -debug) DEBUG="$2"
+			shift
+			;;
 		*) 		usage
 				;;
 	esac
@@ -138,17 +148,21 @@ sudo mount $DST_DEVICE $DST_FOLDER
 echo "Copying files (this may take some time).."
 copy_filesystem
 
-echo "Build HyperBEAM.."
-build_and_copy_hb
+if [ "$DEBUG" == "0" ]; then
+	echo "Build HyperBEAM.."
+	build_and_copy_hb
 
-echo "Copying HyperBEAM.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
+	echo "Copying HyperBEAM.."
+	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
 
-echo "Copy HyperBEAM service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+	echo "Copy HyperBEAM service.."
+	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
 
-echo "Enabling HyperBEAM service.."
-sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
+	echo "Enabling HyperBEAM service.."
+	sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
+else
+	echo "Debug mode enabled. Skipping HyperBEAM installation."
+fi
 
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs

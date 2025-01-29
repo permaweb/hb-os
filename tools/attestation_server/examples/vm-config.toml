@@ -38,7 +38,7 @@ kernel_cmdline = ""
 # Bit 2 set: ECC (Error Correcting Code) is enabled
 # Bit 3 set: RAPL (Running Average Power Limit) is _disabled_
 # Bit 4 set: Ciperthext Hiding is enabled
-platform_info = 0x1
+platform_info = 0x3
 
 # Guest-controlled config that can request the enablement of certain security
 # reveleant configuration on the host and also controls if the VM is debuggable
@@ -70,10 +70,10 @@ image_id =  "00000000000000000000000000000000"
 # cannot use a version older than this. However, the commmited version
 # might be lower than the version reported by the tool.
 [min_commited_tcb]
-bootloader = 3
+bootloader = 4
 tee = 0
-snp = 14
-microcode = 209
+snp = 22
+microcode = 213
 # reserved fields (do not change)
 _reserved = [0, 0, 0, 0]
 
