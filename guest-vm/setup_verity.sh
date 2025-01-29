@@ -22,56 +22,57 @@ BUILD_DIR=$SCRIPT_PATH/../build
 
 trap clean_up EXIT
 
+
 prepare_verity_fs() {
 	# removing SSH keys: they will be regenerated later
 	sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
 
-	# Disable SSH service
-    echo "Disabling SSH service..."
-    sudo chroot $DST_FOLDER systemctl disable ssh.service
-    sudo chroot $DST_FOLDER systemctl mask ssh.service
+    # If debug mode is disabled, perform black box preparation else print skipped message
+	if [ "$DEBUG" == "0" ]; then
 
-    # Disable login for all users except root
-    echo "Disabling login for all users except root..."
-    sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
+		# Disable SSH service
+		echo "Disabling SSH service..."
+		sudo chroot $DST_FOLDER systemctl disable ssh.service
+		sudo chroot $DST_FOLDER systemctl mask ssh.service
 
+		# Disable login for all users except root
+		echo "Disabling login for all users except root..."
+		sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\/bin\/bash$/ s/\/bin\/bash/\/usr\/sbin\/nologin/' $DST_FOLDER/etc/passwd
 
-    # Disable all TTY services (tty1 through tty6)
-	echo "Disabling all TTY services..."
-	for i in {1..6}; do
-		sudo chroot $DST_FOLDER systemctl disable getty@tty$i.service
-		sudo chroot $DST_FOLDER systemctl mask getty@tty$i.service
-	done
+		# Disable all TTY services (tty1 through tty6)
+		echo "Disabling all TTY services..."
+		for i in {1..6}; do
+			sudo chroot $DST_FOLDER systemctl disable getty@tty$i.service
+			sudo chroot $DST_FOLDER systemctl mask getty@tty$i.service
+		done
 
-	# Disable serial console (ttyS0)
-	echo "Disabling serial console (ttyS0)..."
-	sudo chroot $DST_FOLDER systemctl disable serial-getty@ttyS0.service
-	sudo chroot $DST_FOLDER systemctl mask serial-getty@ttyS0.service
+		# Disable serial console (ttyS0)
+		echo "Disabling serial console (ttyS0)..."
+		sudo chroot $DST_FOLDER systemctl disable serial-getty@ttyS0.service
+		sudo chroot $DST_FOLDER systemctl mask serial-getty@ttyS0.service
 
-	# Remove TTY kernel console configuration (GRUB)
-	if [ -f "$DST_FOLDER/etc/default/grub" ]; then
-		echo "Removing TTY kernel console configuration from GRUB..."
-		sudo sed -i 's/console=.*//g' $DST_FOLDER/etc/default/grub
-		sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=none"/' $DST_FOLDER/etc/default/grub
-	fi
-
-	# Ensure no TTY devices are active at runtime
-	echo "Disabling TTY devices..."
-	for dev in tty tty0 tty1 tty2 tty3 tty4 tty5 tty6 ttyS0; do
-		if [ -e "$DST_FOLDER/dev/$dev" ]; then
-			sudo mv $DST_FOLDER/dev/$dev $DST_FOLDER/dev/${dev}_disabled || true
+		# Remove TTY kernel console configuration (GRUB)
+		if [ -f "$DST_FOLDER/etc/default/grub" ]; then
+			echo "Removing TTY kernel console configuration from GRUB..."
+			sudo sed -i 's/console=.*//g' $DST_FOLDER/etc/default/grub
+			sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=none"/' $DST_FOLDER/etc/default/grub
 		fi
-	done
 
-	# Disable kernel messages to console
-	echo "Disabling kernel messages to console..."
-	sudo chroot $DST_FOLDER dmesg --console-off || true
+		# Ensure no TTY devices are active at runtime
+		echo "Disabling TTY devices..."
+		for dev in tty tty0 tty1 tty2 tty3 tty4 tty5 tty6 ttyS0; do
+			if [ -e "$DST_FOLDER/dev/$dev" ]; then
+				sudo mv $DST_FOLDER/dev/$dev $DST_FOLDER/dev/${dev}_disabled || true
+			fi
+		done
 
-	# # Ensure no shell is accessible by default
-	# echo "Disabling default shell access..."
-	# echo '/usr/sbin/nologin' | sudo tee $DST_FOLDER/etc/shells >/dev/null
-
-	echo "Black box preparation complete. No TTY or console interfaces are accessible."
+		# Disable kernel messages to console
+		echo "Disabling kernel messages to console..."
+		sudo chroot $DST_FOLDER dmesg --console-off || true
+		echo "Black box preparation complete. No TTY or console interfaces are accessible."
+	else
+		echo "Debug mode enabled. Skipping black box preparation."
+	fi
 
 	# remove any data in tmp folder
 	sudo rm -rf $DST_FOLDER/tmp
@@ -117,6 +118,9 @@ while [ -n "$1" ]; do
 		-out-root-hash) ROOT_HASH="$2"
 			shift
 			;;
+        -debug) DEBUG="$2"
+			shift
+			;;
 		*) 		usage
 				;;
 	esac
@@ -144,18 +148,21 @@ sudo mount $DST_DEVICE $DST_FOLDER
 echo "Copying files (this may take some time).."
 copy_filesystem
 
-echo "Build HyperBEAM.."
-build_and_copy_hb
+if [ "$DEBUG" == "0" ]; then
+	echo "Build HyperBEAM.."
+	build_and_copy_hb
 
-echo "Copying HyperBEAM.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
+	echo "Copying HyperBEAM.."
+	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
 
-echo "Copy HyperBEAM service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+	echo "Copy HyperBEAM service.."
+	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
 
-echo "Enabling HyperBEAM service.."
-sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
-
+	echo "Enabling HyperBEAM service.."
+	sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
+else
+	echo "Debug mode enabled. Skipping HyperBEAM installation."
+fi
 
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs
@@ -170,110 +177,3 @@ sudo veritysetup format $DST_DEVICE $HASH_TREE | grep Root | cut -f2 > $ROOT_HAS
 echo "Root hash: `cat $ROOT_HASH`"
 
 echo "All done!"
-
-	# # # removing SSH keys: they will be regenerated later
-	# sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
-
-    # # Disable SSH service
-    # echo "Disabling SSH service..."
-    # sudo chroot $DST_FOLDER systemctl disable ssh.service
-    # sudo chroot $DST_FOLDER systemctl mask ssh.service
-
-	# # Removing SSH keys and configuration
-	# echo "Clearing authorized keys..."
-	# sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
-	# sudo rm -rf $DST_FOLDER/home/*/.ssh
-
-    # # Block SSH port with iptables
-    # echo "Blocking SSH port 22..."
-    # sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
-    # sudo chroot $DST_FOLDER iptables-save > /etc/iptables/rules.v4
-
-    # # Remove shell binaries
-    # echo "Removing shell binaries..."
-    # sudo rm -f $DST_FOLDER/bin/bash
-    # sudo rm -f $DST_FOLDER/bin/sh
-    # sudo rm -f $DST_FOLDER/usr/bin/dash
-    # sudo rm -f $DST_FOLDER/usr/bin/zsh
-    # sudo rm -f $DST_FOLDER/usr/bin/ksh
-
-    # # Disable TTY access
-    # echo "Disabling TTY access..."
-    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
-    # sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
-    # sudo rm -f $DST_FOLDER/dev/tty*
-
-    # # Change default login shell to /bin/false
-    # echo "Changing default shell for all users..."
-    # sudo sed -i 's#/bin/bash#/bin/false#g' $DST_FOLDER/etc/passwd
-    # sudo sed -i 's#/bin/sh#/bin/false#g' $DST_FOLDER/etc/passwd
-
-
-    # # Clear authorized keys
-    # echo "Clearing authorized keys..."
-    # sudo rm -f $DST_FOLDER/root/.ssh/authorized_keys
-    # sudo rm -rf $DST_FOLDER/home/*/.ssh
-    # sudo rm -rf $DST_FOLDER/etc/ssh/ssh_host_*
-
-    # # Block SSH port with iptables
-    # echo "Blocking SSH port 22..."
-    # sudo chroot $DST_FOLDER iptables -A INPUT -p tcp --dport 22 -j DROP
-
-    # # Remove unnecessary shell binaries (but keep essential ones for services like hyperbeam)
-    # echo "Removing unnecessary shell binaries..."
-    # sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
-    # sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
-
-    # # Disable TTY access
-    # echo "Disabling TTY access..."
-    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null || true
-    # sudo rm -f $DST_FOLDER/etc/securetty 2>/dev/null || true
-    # sudo rm -f $DST_FOLDER/dev/tty*
-
-    # # Change default login shell to /usr/sbin/nologin for all users
-    # echo "Changing default shell for all users..."
-    # sudo sed -i 's#/bin/bash#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-    # sudo sed -i 's#/bin/sh#/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-
-    # # Allow specific shell for hyperbeam (if required)
-    # echo "Allowing shell for hyperbeam service user..."
-    # sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
-
-		# sudo chroot $DST_FOLDER
-	# getent passwd hyperbeam
-	# getent group hyperbeam
-	# exit
-
-    # Remove ALL shell binaries (bash/sh) for non-hyperbeam users
-    # echo "Disabling shell binaries..."
-    # sudo mv $DST_FOLDER/bin/bash $DST_FOLDER/bin/bash_disabled 2>/dev/null || true
-    # sudo mv $DST_FOLDER/bin/sh $DST_FOLDER/bin/sh_disabled 2>/dev/null || true
-    # sudo mv $DST_FOLDER/usr/bin/bash $DST_FOLDER/usr/bin/bash_disabled 2>/dev/null || true
-    # sudo mv $DST_FOLDER/usr/bin/sh $DST_FOLDER/usr/bin/sh_disabled 2>/dev/null || true
-
-    # Disable TTY logins
-    # echo "Disabling TTY access..."
-    # sudo rm -f $DST_FOLDER/etc/securetty  # Remove list of allowed TTY devices
-    # sudo rm -f $DST_FOLDER/dev/tty*       # Remove TTY devices
-    # sudo sed -i '/tty[0-9]/d' $DST_FOLDER/etc/inittab 2>/dev/null  # Disable TTY in inittab
-
-    # Force ALL users to use /usr/sbin/nologin (including root)
-    # echo "Changing all user shells to nologin..."
-    # sudo sed -i 's#\(.*:.*:\)/bin/bash#\1/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-    # sudo sed -i 's#\(.*:.*:\)/bin/sh#\1/usr/sbin/nologin#g' $DST_FOLDER/etc/passwd
-
-#    # Ensure hyperbeam user and group exist
-#     echo "Ensuring hyperbeam user and group exist..."
-# 	sudo chroot $DST_FOLDER groupadd -g 1001 hyperbeam || true
-# 	sudo chroot $DST_FOLDER useradd -u 1001 -g 1001 -d /home/hyperbeam -s /bin/bash hyperbeam || true
-
-    # # Explicitly allow ONLY the hyperbeam user
-    # echo "Allowing shell access for hyperbeam user..."
-    # sudo sed -i '/hyperbeam/s#/usr/sbin/nologin#/bin/bash_disabled#g' $DST_FOLDER/etc/passwd
-
-    # # Remove all home directories except hyperbeam
-    # echo "Cleaning home directories..."
-    # sudo find $DST_FOLDER/home/ -mindepth 1 -maxdepth 1 -not -name hyperbeam -exec rm -rf {} +
-	# Allow hyperbeam service to run without a shell
-    # echo "Configuring hyperbeam service permissions..."
-	# sudo chroot $DST_FOLDER chown -R 1001:1001 /usr/local/bin/hb

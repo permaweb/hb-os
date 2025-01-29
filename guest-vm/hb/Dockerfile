@@ -42,18 +42,20 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 # Set up build directories
 RUN mkdir -p /build /release
 
+# Copy the service file to /release
+COPY hyperbeam.service /release
+
 # Clone the HyperBEAM repository
 RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM
 
 # Compile the application code using Rebar3
-RUN cd /build/HyperBEAM && \
+RUN echo "Force rebuild: $(date +%s)"
+RUN cd /build/HyperBEAM && git pull && git checkout test/snp && \
     rebar3 release && \
     cp -r _build/default/rel/hb /release/hb && \
     mkdir -p /release/hb/test && \
     cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd
 
-# Copy the service file to /release
-COPY hyperbeam.service /release
 
 # Clean up build files
 RUN rm -rf /build
