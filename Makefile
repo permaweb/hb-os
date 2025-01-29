@@ -56,13 +56,20 @@ VM_CONFIG_PARAMS   = -ovmf $(OVMF_PATH) -kernel $(KERNEL_PATH) -initrd $(INITRD_
 
 HB_PORT			   ?= 8734
 QEMU_PORT		   ?= 4444
+DEBUG			   ?= 0
 
+RELEASE_DIR			= release
 
 run:
 	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_EXTRA_PARAMS) -hda $(IMAGE_PATH)
 
 run_setup:
-	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_EXTRA_PARAMS) -hda $(IMAGE_PATH) -hdb $(CLOUD_CONFIG)
+	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_EXTRA_PARAMS) \
+		-hda $(IMAGE_PATH) \
+		-hdb $(CLOUD_CONFIG) \
+		-hb-port $(HB_PORT) \
+		-qemu-port $(QEMU_PORT) \
+		-debug $(DEBUG)
 
 run_sev_snp:
 	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_EXTRA_PARAMS) $(QEMU_SNP_PARAMS) -hda $(IMAGE_PATH)
@@ -72,7 +79,13 @@ run_sev_snp_direct_boot:
 
 run_verity_workflow:
 	./guest-vm/create-vm-config.sh $(VM_CONFIG_PARAMS) -cmdline "$(KERNEL_CMDLINE) $(VERITY_PARAMS)" -out $(VM_CONFIG_FILE)
-	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_SNP_PARAMS) -hda $(VERITY_IMAGE) -hdb $(VERITY_HASH_TREE) -load-config $(VM_CONFIG_FILE) -hb-port $(HB_PORT) -qemu-port $(QEMU_PORT)
+	sudo -E $(QEMU_LAUNCH_SCRIPT) $(QEMU_DEF_PARAMS) $(QEMU_SNP_PARAMS) \
+		-hda $(VERITY_IMAGE) \
+		-hdb $(VERITY_HASH_TREE) \
+		-load-config $(VM_CONFIG_FILE) \
+		-hb-port $(HB_PORT) \
+		-qemu-port $(QEMU_PORT) \
+		-debug $(DEBUG)
 
 run_luks_workflow:
 	./guest-vm/create-vm-config.sh $(VM_CONFIG_PARAMS) -cmdline "$(KERNEL_CMDLINE) $(LUKS_PARAMS)" -out $(VM_CONFIG_FILE)
@@ -104,7 +117,12 @@ create_new_vm: init_dir
 
 setup_verity:
 	mkdir -p $(BUILD_DIR)/verity
-	./guest-vm/setup_verity.sh -image $(IMAGE) -out-image $(VERITY_IMAGE) -out-hash-tree $(VERITY_HASH_TREE) -out-root-hash $(VERITY_ROOT_HASH)
+	./guest-vm/setup_verity.sh \
+	-image $(IMAGE) \
+	-out-image $(VERITY_IMAGE) \
+	-out-hash-tree $(VERITY_HASH_TREE) \
+	-out-root-hash $(VERITY_ROOT_HASH) \
+	-debug $(DEBUG)
 
 setup_luks:
 	mkdir -p $(BUILD_DIR)/luks
@@ -127,6 +145,14 @@ init_dir:
 	@mkdir -p $(BUILD_DIR)
 	@mkdir -p $(BIN_DIR)
 	@mkdir -p $(GUEST_DIR)
+
+# Make release directory if it does not exist copy OVMF, kernel, and initrd to release directory
+release:
+	mkdir -p $(RELEASE_DIR)
+	cp $(OVMF) $(RELEASE_DIR)
+	cp $(KERNEL) $(RELEASE_DIR)
+	cp $(INITRD) $(RELEASE_DIR)
+	cp $(BUILD_DIR)/verity/* $(RELEASE_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)

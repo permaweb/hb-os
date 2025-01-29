@@ -59,6 +59,7 @@ usage() {
 	echo " -load-config PATH  Will load -bios,-smp,-kernel,-initrd,-append amd -policy from the VM config .toml file. You can still override this by passing the corresponding flag directly"
 	echo " -hb-port 		  Port for HyperBeam (default: 8734)"
 	echo " -qemu-port 	   	  Port for QEMU monitor (default: 4444)"
+	echo " -debug			  Enable debug mode"
 	exit 1
 }
 
@@ -199,6 +200,9 @@ while [ -n "$1" ]; do
 			shift
 			;;
 		-qemu-port) QEMU_PORT="$2"
+			shift
+			;;
+		-debug) DEBUG="$2"
 			shift
 			;;
  		*) 		usage
@@ -470,9 +474,10 @@ echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 echo "Mapping CTRL-C to CTRL-]"
 stty intr ^]
 
-if [ -f "$TOML_CONFIG" ]; then
+# if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
+if [ -n "$TOML_CONFIG" ] && [ "$DEBUG" = "0" ]; then
     echo "Launching QEMU as a background service..."
-    bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+    bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
     sleep 1
 	echo "QEMU is running in the background."
 else
