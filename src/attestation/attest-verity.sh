@@ -6,8 +6,8 @@ TMP_FILE=$(mktemp)
 echo $HOSTS_FILE
 
 SCRIPT_DIR=$(dirname $0)
-VERIFY_REPORT_BIN=$(realpath $SCRIPT_DIR/../build/bin/verify_report)
-SSH_HOSTS_FILE=$(realpath $SCRIPT_DIR/../build/known_hosts)
+VERIFY_REPORT_BIN=$(realpath $SCRIPT_DIR/../../build/bin/verify_report)
+SSH_HOSTS_FILE=$(realpath $SCRIPT_DIR/../../build/known_hosts)
 
 VM_CONFIG=""
 HOST=localhost

@@ -1,4 +1,5 @@
-build/*
+build
+release
 
 .cache/
 tools/attestation_server/target

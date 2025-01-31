@@ -8,7 +8,7 @@ DST_DEVICE=/dev/nbd1
 DST_FOLDER=$(mktemp -d)
 
 SRC_IMAGE=
-DST_IMAGE=verity_image.qcow2
+DST_IMAGE=image.qcow2
 HASH_TREE=hash_tree.bin
 ROOT_HASH=roothash.txt
 
@@ -16,9 +16,8 @@ NON_INTERACTIVE=""
 
 SCRIPT_PATH=$(realpath `dirname $0`)
 . $SCRIPT_PATH/common.sh
-. $SCRIPT_PATH/hb/release.sh
 
-BUILD_DIR=$SCRIPT_PATH/../build
+BUILD_DIR=$SCRIPT_PATH/../../build
 
 trap clean_up EXIT
 
@@ -149,9 +148,6 @@ echo "Copying files (this may take some time).."
 copy_filesystem
 
 if [ "$DEBUG" == "0" ]; then
-	echo "Build HyperBEAM.."
-	build_and_copy_hb
-
 	echo "Copying HyperBEAM.."
 	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
 
