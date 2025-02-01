@@ -133,14 +133,14 @@ fn main() {
     #[allow(dead_code)]
     #[derive(Debug, Serialize)]
     struct Output {
-        kernel_hash: String,
-        initrd_hash: String,
-        cmdline_hash: String,
-        ovmf_hash: String,
+        kernel: String,
+        initrd: String,
+        append: String,
+        firmware: String,
         vcpus: u32,
-        vcputype: u32,
-        vmmtype: u32,
-        guest_features: String,
+        vcpu_type: u32,
+        vmm_type: u32,
+        guest_features: u64,
         expected_hash: String,
     }
 
@@ -223,14 +223,14 @@ fn main() {
 
 
     let output = Output {
-        kernel_hash: bytes_to_hex(&kernel_hash),
-        initrd_hash: bytes_to_hex(&initrd_hash),
-        cmdline_hash: bytes_to_hex(&cmdline_hash),
-        ovmf_hash: bytes_to_hex(&ovmf_bytes),
+        kernel: bytes_to_hex(&kernel_hash),
+        initrd: bytes_to_hex(&initrd_hash),
+        append: bytes_to_hex(&cmdline_hash),
+        firmware: bytes_to_hex(&ovmf_bytes),
         vcpus,
-        vcputype: vcpu_type as u32,
-        vmmtype: vmm_type.unwrap() as u32,
-        guest_features: guest_features_string,
+        vcpu_type: vcpu_type as u32,
+        vmm_type: vmm_type.unwrap() as u32,
+        guest_features: guest_features,
         expected_hash:  bytes_to_hex(&expected_hash)
     };
 

@@ -93,7 +93,10 @@ init_dir:
 
 
 ### BUILD/SETUP BASE IMAGE - START ###
-build_base_image: init_dir unpack_kernel initramfs
+build_base_image: init_dir unpack_kernel initramfs create_vm run_setup
+	
+
+create_vm:	
 	./src/guest-vm/create-new-vm.sh -image-name $(IMAGE_NAME) -build-dir $(GUEST_DIR)
 
 unpack_kernel: init_dir
@@ -111,6 +114,7 @@ run_setup:
 		-hb-port $(HB_PORT) \
 		-qemu-port $(QEMU_PORT) \
 		-debug $(DEBUG)
+
 # NOTES: WHEN IN VM, RUN THE FOLLOWING COMMANDS
 ## FROM HOST: scp -P 2222 build/snp-release/linux/guest/*.deb <username>@localhost:
 ## FROM GUEST: sudo dpkg -i linux-*.deb && rm -rf linux-*.deb && sudo systemctl disable multipathd.service && sudo shutdown now

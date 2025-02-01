@@ -478,14 +478,54 @@ stty intr ^]
 if [ -n "$TOML_CONFIG" ] && [ "$DEBUG" = "0" ]; then
     echo "Launching QEMU as a background service..."
     bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-    sleep 1
 	echo "QEMU is running in the background."
+
+	echo "Waiting for QEMU to start..."
+    sleep 5
+	# Loop until we get a 200 response from the endpoint
+	while true; do
+		echo "Sending GET request to http://localhost:8734/~meta@1.0/info to check if Guest is ready..."
+		response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8734/~meta@1.0/info)
+		if [ "$response" -eq 200 ]; then
+			echo "Received 200 response. Proceeding to send POST request..."
+			break
+		else
+			echo "Received $response response. Retrying in 5 seconds..."
+			sleep 2
+		fi
+	done
+
+	JSON_FILE=./build/measurement-inputs.json
+	# Wrap the JSON file content with snp_hashes using jq
+	WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
+
+	# Send the POST request with the wrapped JSON
+	curl -X POST -H "Content-Type: application/json" -d "$WRAPPED_JSON" http://localhost:8734/~snp@1.0/init
 else
 	echo "Launching VM normally..."
 	echo "  $QEMU_CMDLINE"
-	sleep 1
-	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+	echo "QEMU is running in the Background."
+	sleep 20
+	ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
+	scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
+	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost 'sudo dpkg -i linux-*.deb && rm -rf linux-*.deb && sudo systemctl disable multipathd.service && sudo shutdown now'
+
 fi
+
+# At the very end, print the desired JSON fields (excluding expected_hash)
+echo "Final configuration:"
+jq '{ 
+      kernel, 
+      initrd, 
+      append, 
+      firmware, 
+      vcpus, 
+      vcpu_type, 
+      vmm_type, 
+      guest_features,
+	  expected_hash
+    }' "$JSON_FILE"
 
 # restore the mapping
 stty intr ^c
