@@ -1,0 +1,13 @@
+[Unit]
+Description=CU Service
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/cu
+ExecStartPre=/usr/bin/npm install
+ExecStart=/usr/bin/npm run start
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

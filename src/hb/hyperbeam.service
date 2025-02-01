@@ -2,9 +2,10 @@
 Description=Permaweb Node
 
 [Service]
+User=root
 Type=simple
 Environment=HB_PRINT=http,debug,dev_snp
-ExecStart=/usr/local/bin/hb/bin/hb foreground
+ExecStart=/root/hb/bin/hb foreground
 Restart=on-failure
 
 [Install]

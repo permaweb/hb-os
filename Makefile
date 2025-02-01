@@ -51,7 +51,7 @@ VM_CONF_TEMPLATE   = $(GUEST_DIR)/vm-config-template.toml
 VM_CONFIG_FILE     = $(GUEST_DIR)/vm-config.toml
 VM_CONFIG_PARAMS   = -ovmf $(OVMF_PATH) -kernel $(KERNEL_PATH) -initrd $(INITRD_PATH) -template $(VM_CONF_TEMPLATE) -cpus $(CPUS) -policy $(POLICY)
 
-HB_PORT			   ?= 8734
+HB_PORT			   ?= 80
 QEMU_PORT		   ?= 4444
 DEBUG			   ?= 0
 
@@ -90,7 +90,6 @@ init_dir:
 	@mkdir -p $(GUEST_DIR)
 
 ### INITIALIZATION - END ###
-
 
 ### BUILD/SETUP BASE IMAGE - START ###
 build_base_image: init_dir unpack_kernel initramfs create_vm run_setup
@@ -161,6 +160,12 @@ run_release:
 		-hb-port $(HB_PORT) \
 		-qemu-port $(QEMU_PORT) \
 		-debug $(DEBUG)
+
+
+# Setup Host
+setup_host:
+	cd build/snp-release
+	sudo ./install.sh
 
 ### HELPER COMMANDS - START ###
 attest_verity_vm:

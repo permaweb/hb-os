@@ -29,6 +29,9 @@ UEFI_PATH="$SEV_TOOLCHAIN_PATH/share/qemu/"
 UEFI_CODE=""
 UEFI_VARS=""
 
+
+JSON_FILE=./build/measurement-inputs.json
+
 usage() {
 	echo "$0 [options]"
 	echo "Available <commands>:"
@@ -365,7 +368,7 @@ fi
 if [ "$USE_DEFAULT_NETWORK" = "1" ]; then
     #echo "guest port 22 is fwd to host 8000..."
 #    add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
-		add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:8080-:80,hostfwd=tcp:0.0.0.0:${HB_PORT}-:8734"
+		add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:${HB_PORT}-:8734"
 #    add_opts "-netdev user,id=vmnic"
     add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
 fi
@@ -469,63 +472,91 @@ echo | tee -a ${QEMU_CONSOLE_LOG}
 echo "Disabling transparent huge pages"
 echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 
-
 # map CTRL-C to CTRL ]
 echo "Mapping CTRL-C to CTRL-]"
 stty intr ^]
 
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
-if [ -n "$TOML_CONFIG" ] && [ "$DEBUG" = "0" ]; then
+if [ -n "$TOML_CONFIG" ]; then
     echo "Launching QEMU as a background service..."
-    bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-	echo "QEMU is running in the background."
+	if [ "$DEBUG" = "0" ]; then
+		bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+		echo "QEMU is running in the background."
+	else
+		echo "Launching QEMU in debug mode..."
+    	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+	fi
+	
+	if [ "$DEBUG" = "0" ]; then
+		echo "Waiting for QEMU to start..."
+		sleep 5
+		# Loop until we get a 200 response from the endpoint or we try 10 times
+		attempt=1
+		max_attempts=10
 
-	echo "Waiting for QEMU to start..."
-    sleep 5
-	# Loop until we get a 200 response from the endpoint
-	while true; do
-		echo "Sending GET request to http://localhost:8734/~meta@1.0/info to check if Guest is ready..."
-		response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8734/~meta@1.0/info)
-		if [ "$response" -eq 200 ]; then
-			echo "Received 200 response. Proceeding to send POST request..."
-			break
-		else
-			echo "Received $response response. Retrying in 5 seconds..."
-			sleep 2
+		while [ $attempt -le $max_attempts ]; do
+			echo "Attempt $attempt: Sending GET request to http://localhost:${HB_PORT}/~meta@1.0/info to check if Guest is ready..."
+			response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${HB_PORT}/~meta@1.0/info)
+			if [ "$response" -eq 200 ]; then
+				echo "Received 200 response. Proceeding to send POST request..."
+				break
+			else
+				echo "Received $response response. Retrying in 5 seconds..."
+				sleep 5
+			fi
+			attempt=$((attempt + 1))
+		done
+
+		if [ $attempt -gt $max_attempts ]; then
+			echo "Max attempts reached. Guest is not ready."
+			# restore the mapping
+			stty intr ^c
+
+			rm -rf ${QEMU_CMDLINE}
+			exit 1
 		fi
-	done
 
-	JSON_FILE=./build/measurement-inputs.json
-	# Wrap the JSON file content with snp_hashes using jq
-	WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
+		# Wrap the JSON file content with snp_hashes using jq
+		WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
 
-	# Send the POST request with the wrapped JSON
-	curl -X POST -H "Content-Type: application/json" -d "$WRAPPED_JSON" http://localhost:8734/~snp@1.0/init
+		# Send the POST request with the wrapped JSON
+		curl -X POST -H "Content-Type: application/json" -d "$WRAPPED_JSON" http://localhost:${HB_PORT}/~snp@1.0/init
+
+		# At the very end, print the desired JSON fields (excluding expected_hash)
+		# if JSON_FILE file exists
+		if [ -f "$JSON_FILE" ]; then
+			echo "Final configuration:"
+			jq '{ 
+				kernel, 
+				initrd, 
+				append, 
+				firmware, 
+				vcpus, 
+				vcpu_type, 
+				vmm_type, 
+				guest_features,
+				expected_hash
+				}' "$JSON_FILE"
+		fi
+	fi
+
 else
 	echo "Launching VM normally..."
 	echo "  $QEMU_CMDLINE"
-	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-	echo "QEMU is running in the Background."
+	if [ "$DEBUG" = "0" ]; then
+		echo "Launching QEMU as a background service..."
+		bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+	else
+		echo "Launching QEMU in debug mode..."
+		bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+	fi
 	sleep 20
 	ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
 	scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
+	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost 'touch /home/hb/hello.txt'
+	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost 'curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && node -v && npm -v'
 	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost 'sudo dpkg -i linux-*.deb && rm -rf linux-*.deb && sudo systemctl disable multipathd.service && sudo shutdown now'
-
 fi
-
-# At the very end, print the desired JSON fields (excluding expected_hash)
-echo "Final configuration:"
-jq '{ 
-      kernel, 
-      initrd, 
-      append, 
-      firmware, 
-      vcpus, 
-      vcpu_type, 
-      vmm_type, 
-      guest_features,
-	  expected_hash
-    }' "$JSON_FILE"
 
 # restore the mapping
 stty intr ^c

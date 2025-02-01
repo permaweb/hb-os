@@ -77,13 +77,16 @@ prepare_verity_fs() {
 	sudo rm -rf $DST_FOLDER/tmp
 
 	# rename home, etc, var dirs
-	sudo mv $DST_FOLDER/home $DST_FOLDER/home_ro
+	# sudo mv $DST_FOLDER/home $DST_FOLDER/home_ro
+	sudo mv $DST_FOLDER/root $DST_FOLDER/root_ro
 	sudo mv $DST_FOLDER/etc $DST_FOLDER/etc_ro
 	sudo mv $DST_FOLDER/var $DST_FOLDER/var_ro
 
 	# create new home, etc, var dirs (original will be mounted as R/W tmpfs)
 	sudo mkdir -p $DST_FOLDER/home $DST_FOLDER/etc $DST_FOLDER/var $DST_FOLDER/tmp
 
+	# Copy home_ro contents to home
+	sudo cp -r $DST_FOLDER/root_ro $DST_FOLDER/root/
 
 }
 
@@ -147,18 +150,23 @@ sudo mount $DST_DEVICE $DST_FOLDER
 echo "Copying files (this may take some time).."
 copy_filesystem
 
-if [ "$DEBUG" == "0" ]; then
-	echo "Copying HyperBEAM.."
-	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/usr/local/bin/
+echo "Copying HyperBEAM.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/root
 
-	echo "Copy HyperBEAM service.."
-	sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+echo "Copy HyperBEAM service.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
 
-	echo "Enabling HyperBEAM service.."
-	sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
-else
-	echo "Debug mode enabled. Skipping HyperBEAM installation."
-fi
+echo "Enabling HyperBEAM service.."
+sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
+
+echo "Copying CU.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu $DST_FOLDER/root
+
+echo "Copy CU service.."
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu.service $DST_FOLDER/etc/systemd/system/cu.service
+
+echo "Enabling CU service.."
+sudo chroot $DST_FOLDER systemctl enable cu.service
 
 echo "Preparing output filesystem for dm-verity.."
 prepare_verity_fs
