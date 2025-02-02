@@ -11,7 +11,7 @@ set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 [ -d /dev ] || mkdir -m 0755 /dev
-[ -d /root ] || mkdir -m 0700 /root
+[ -d /root ] || mkdir -m 0755 /root
 [ -d /sys ] || mkdir /sys
 [ -d /proc ] || mkdir /proc
 [ -d /tmp ] || mkdir /tmp
@@ -99,13 +99,14 @@ boot_verity() {
     mount -o ro,noload /dev/mapper/root $MNT_DIR
 
     # create RAM filesystems (protected by SEV-SNP)
-    mount -t tmpfs -o size=8192M tmpfs $MNT_DIR/home
+    mount -t tmpfs -o size=8192M tmpfs $MNT_DIR/root
+    # mount -t tmpfs -o size=8192M tmpfs $MNT_DIR/home
     mount -t tmpfs -o size=1024M tmpfs $MNT_DIR/etc
     mount -t tmpfs -o size=2048M tmpfs $MNT_DIR/var
     mount -t tmpfs -o size=1024M tmpfs $MNT_DIR/tmp
 
     # copy home, etc, var contents to RAM fs
-    rsync -paxHAWXS $MNT_DIR/home_ro/ $MNT_DIR/home/
+    rsync -paxHAWXS $MNT_DIR/root_ro/ $MNT_DIR/root/
     rsync -paxHAWXS $MNT_DIR/etc_ro/ $MNT_DIR/etc/
     rsync -paxHAWXS $MNT_DIR/var_ro/ $MNT_DIR/var/
 

@@ -127,7 +127,7 @@ start
 
 print_section "apt dependencies"
 sudo apt update && sudo apt install -y git curl wget make whois pv genisoimage \
-    qemu-utils pkg-config gcc libssl-dev cpio kmod fdisk rsync cryptsetup
+    qemu-utils pkg-config gcc libssl-dev cpio kmod fdisk rsync cryptsetup jq
 
 print_section "Docker"
 if ! command -v docker &> /dev/null || [ $FORCE -eq 1 ]
