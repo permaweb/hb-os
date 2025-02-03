@@ -37,16 +37,28 @@ def prepare_verity_fs():
 
         print("Disabling login for all users except root...")
         passwd_file = os.path.join(dst_folder, "etc/passwd")
+        # Read the file (this should work because reading is allowed)
         with open(passwd_file, "r") as f:
             lines = f.readlines()
         new_lines = []
+        import re
         for line in lines:
             if re.search(r":/bin/bash\s*$", line):
                 line = re.sub(r"/bin/bash\s*$", "/usr/sbin/nologin", line)
             new_lines.append(line)
-        with open(passwd_file, "w") as f:
+        # Write the modified content to a temporary file
+        import tempfile
+        tmp_passwd = os.path.join(tempfile.gettempdir(), "passwd.tmp")
+        with open(tmp_passwd, "w") as f:
             f.writelines(new_lines)
-
+        # Use sudo to copy the temporary file over the original file
+        subprocess.run(["sudo", "cp", tmp_passwd, passwd_file], check=True)
+        # Optionally remove the temporary file
+        try:
+            os.remove(tmp_passwd)
+        except Exception:
+            pass
+        
         print("Disabling all TTY services...")
         for i in range(1, 7):
             subprocess.run(["sudo", "chroot", dst_folder, "systemctl", "disable", f"getty@tty{i}.service"], check=True)
@@ -84,18 +96,26 @@ def prepare_verity_fs():
     # Rename home, etc, var directories (e.g. rename root to root_ro)
     for d in ["root", "etc", "var"]:
         src_dir = os.path.join(dst_folder, d)
+        dest_dir = os.path.join(dst_folder, f"{d}_ro")
         if os.path.exists(src_dir):
-            os.rename(src_dir, os.path.join(dst_folder, f"{d}_ro"))
-    # Create new home, etc, var, and tmp directories
+            if os.path.exists(dest_dir):
+                # Remove destination if it exists
+                subprocess.run(["sudo", "rm", "-rf", dest_dir], check=True)
+            # Use sudo to move the directory since it is owned by root.
+            subprocess.run(["sudo", "mv", src_dir, dest_dir], check=True)
+
+    # Create new home, etc, var, and tmp directories using sudo
     for d in ["home", "etc", "var", "tmp"]:
-        os.makedirs(os.path.join(dst_folder, d), exist_ok=True)
+        dest = os.path.join(dst_folder, d)
+        subprocess.run(["sudo", "mkdir", "-p", dest], check=True)
 
     # Copy the contents of root_ro back into the new root directory
     root_ro = os.path.join(dst_folder, "root_ro")
     if os.path.exists(root_ro):
         subprocess.run(["sudo", "cp", "-r", root_ro, os.path.join(dst_folder, "root")], check=True)
 
-def setup_guest_image(image, out_image, out_hash_tree, out_root_hash, debug):
+
+def setup_guest_image(content_dir, image, out_image, out_hash_tree, out_root_hash, debug):
     """
     Builds a dm-verity image using the provided configuration dictionary.
     
@@ -116,12 +136,13 @@ def setup_guest_image(image, out_image, out_hash_tree, out_root_hash, debug):
     ctx["DST_IMAGE"] = out_image
     ctx["HASH_TREE"] = out_hash_tree
     ctx["ROOT_HASH"] = out_root_hash
-    ctx["NON_INTERACTIVE"] = True
+    ctx["NON_INTERACTIVE"] = False
     ctx["DEBUG"] = debug
+    ctx['BUILD_DIR'] = content_dir
 
-    # Determine the script path and build directory (assuming relative location)
-    script_path = os.path.realpath(os.path.dirname(__file__))
-    ctx["BUILD_DIR"] = os.path.join(script_path, "..", "..", "build")
+    # # Determine the script path and build directory (assuming relative location)
+    # script_path = os.path.realpath(os.path.dirname(__file__))
+    # ctx["BUILD_DIR"] = os.path.join(script_path, "..", "..", "build")
 
     # Register cleanup to run on exit.
     atexit.register(clean_up)
@@ -148,12 +169,12 @@ def setup_guest_image(image, out_image, out_hash_tree, out_root_hash, debug):
 
     print("Copying HyperBEAM..")
     subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    f"{ctx['BUILD_DIR']}/hb/hb",
+                    f"{ctx['BUILD_DIR']}/hb",
                     os.path.join(ctx["DST_FOLDER"], "root")],
                    check=True)
     print("Copying HyperBEAM service..")
     subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    f"{ctx['BUILD_DIR']}/hb/hyperbeam.service",
+                    f"{ctx['BUILD_DIR']}/hyperbeam.service",
                     os.path.join(ctx["DST_FOLDER"], "etc", "systemd", "system", "hyperbeam.service")],
                    check=True)
     print("Enabling HyperBEAM service..")
@@ -161,12 +182,12 @@ def setup_guest_image(image, out_image, out_hash_tree, out_root_hash, debug):
                    check=True)
     print("Copying CU..")
     subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    f"{ctx['BUILD_DIR']}/hb/cu",
+                    f"{ctx['BUILD_DIR']}/cu",
                     os.path.join(ctx["DST_FOLDER"], "root")],
                    check=True)
     print("Copying CU service..")
     subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    f"{ctx['BUILD_DIR']}/hb/cu.service",
+                    f"{ctx['BUILD_DIR']}/cu.service",
                     os.path.join(ctx["DST_FOLDER"], "etc", "systemd", "system", "cu.service")],
                    check=True)
     print("Enabling CU service..")
@@ -182,15 +203,29 @@ def setup_guest_image(image, out_image, out_hash_tree, out_root_hash, debug):
 
     print("Computing hash tree..")
     try:
-        result = subprocess.run(["sudo", "veritysetup", "format", ctx["DST_DEVICE"], ctx["HASH_TREE"]],
-                                check=True, capture_output=True, text=True)
-        root_hash = None
-        for line in result.stdout.splitlines():
-            if line.startswith("Root"):
-                parts = line.split()
-                if len(parts) >= 2:
-                    root_hash = parts[1]
-                    break
+        result = subprocess.run(
+            ["sudo", "veritysetup", "format", ctx["DST_DEVICE"], ctx["HASH_TREE"]],
+            check=True, capture_output=True, text=True
+        )
+        # Print the full output for debugging purposes
+        print("veritysetup output:")
+        print(result.stdout)
+        
+        import re
+        # Try to match a line like "Root hash: <hash_value>"
+        m = re.search(r"Root\s+hash:\s*([0-9a-fA-F]+)", result.stdout)
+        if m:
+            root_hash = m.group(1)
+        else:
+            # Fallback: try splitting on ':' for any line that starts with "Root"
+            root_hash = None
+            for line in result.stdout.splitlines():
+                if line.startswith("Root"):
+                    parts = line.split(":")
+                    if len(parts) >= 2:
+                        root_hash = parts[1].strip()
+                        break
+
         if root_hash:
             with open(ctx["ROOT_HASH"], "w") as f:
                 f.write(root_hash)

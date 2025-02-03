@@ -177,19 +177,26 @@ def create_output_image():
         result = subprocess.run(["qemu-img", "info", ctx["SRC_IMAGE"]],
                                 check=True, capture_output=True, text=True)
         size = None
+        print(result)
         for line in result.stdout.splitlines():
             if "virtual size:" in line:
-                m = re.search(r'virtual size:\s+([\d\.]+)([GMK])', line)
+                m = re.search(r'virtual size:\s+([\d\.]+)\s*([GMK])i?B', line)
                 if m:
                     size = m.group(1) + m.group(2)
                     break
         if not size:
             print("Failed to determine image size.")
             sys.exit(1)
+        
+        # Ensure the destination directory exists
+        dst_dir = os.path.dirname(ctx["DST_IMAGE"])
+        os.makedirs(dst_dir, exist_ok=True)
+
         subprocess.run(["qemu-img", "create", "-f", "qcow2", ctx["DST_IMAGE"], size], check=True)
     except Exception as e:
         print("Error creating output image:", e)
         sys.exit(1)
+
 
 def copy_filesystem():
     """

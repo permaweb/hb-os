@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import os
 import re
+import shutil
 import sys
 import json
 import shlex
 import argparse
 import subprocess
+
+import requests
 
 from src.dependencies import install_dependencies
 from src.create_new_vm import create_vm_image
@@ -86,7 +89,12 @@ def init(config):
     # Download SNP release
     build_dir = config["DIRECTORIES"]["build"]
     tarball = os.path.join(build_dir, "snp-release.tar.gz")
-    run_command(f"wget https://github.com/SNPGuard/snp-guard/releases/download/v0.1.2/snp-release.tar.gz -O {tarball}")
+    url = "https://github.com/SNPGuard/snp-guard/releases/download/v0.1.2/snp-release.tar.gz"
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(tarball, "wb") as f:
+            shutil.copyfileobj(r.raw, f)
     run_command(f"tar -xf {tarball} -C {build_dir}")
     run_command(f"rm {tarball}")
     
@@ -166,13 +174,24 @@ def build_content(config):
     build_guest_content(out_dir, dockerfile)
 
 def setup_verity(config):
-    image = config["BASE_IMAGE"]["image"]
+    os.makedirs(config["DIRECTORIES"]["build_verity"], exist_ok=True)
+
+    image = config["BASE_IMAGE"]["path"]
     verity_image = config["VERITY"]["image"]
     verity_hash_tree = config["VERITY"]["hash_tree"]
     verity_root_hash = config["VERITY"]["root_hash"]
     debug = config["DEBUG"]
 
-    setup_guest_image(image, verity_image, verity_hash_tree, verity_root_hash, debug)
+    # Build the command string. Make sure that the relative path to the script is correct.
+    cmd = (
+        f"./src/guest-vm/setup_verity.sh "
+        f"-image {image} "
+        f"-out-image {verity_image} "
+        f"-out-hash-tree {verity_hash_tree} "
+        f"-out-root-hash {verity_root_hash} "
+        f"-debug {debug}"
+    )
+    run_command(cmd)
 
 def setup_vm_config(config):
     kernel = config["KERNEL"]["vmlinuz"]
@@ -209,7 +228,7 @@ def run_vm(config):
     qemu_port = config["QEMU"]["qemu_port"]
     debug = config["DEBUG"]
     memory = config["QEMU"]["memory"]
-    cpus = config["VM_CONFIG"]["cpus"]
+    cpus = config["VM_CONFIG"]["vcpu_count"]
     qemu_launch_script = config["QEMU"]["launch_script"]
     qemu_snp_params = config["QEMU"]["snp_params"]
 
