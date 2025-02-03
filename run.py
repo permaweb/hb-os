@@ -15,7 +15,6 @@ from src.create_new_vm import create_vm_image
 from src.build_initramfs import build_initramfs
 from src.build_content import build_guest_content
 from src.create_vm_config import create_vm_config_file
-from src.setup_guest import setup_guest_image
 
 def load_config(config_file="config.json"):
     # Load the raw JSON config
