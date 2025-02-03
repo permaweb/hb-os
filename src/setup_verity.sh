@@ -17,8 +17,6 @@ NON_INTERACTIVE=""
 SCRIPT_PATH=$(realpath `dirname $0`)
 . $SCRIPT_PATH/common.sh
 
-BUILD_DIR=$SCRIPT_PATH/../../build
-
 trap clean_up EXIT
 
 
@@ -120,6 +118,9 @@ while [ -n "$1" ]; do
 		-out-root-hash) ROOT_HASH="$2"
 			shift
 			;;
+        -build-dir) BUILD_DIR="$2"
+			shift
+			;;
         -debug) DEBUG="$2"
 			shift
 			;;
@@ -151,19 +152,19 @@ echo "Copying files (this may take some time).."
 copy_filesystem
 
 echo "Copying HyperBEAM.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/root
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/hb $DST_FOLDER/root
 
 echo "Copy HyperBEAM service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
 
 echo "Enabling HyperBEAM service.."
 sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
 
 echo "Copying CU.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu $DST_FOLDER/root
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/cu $DST_FOLDER/root
 
 echo "Copy CU service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu.service $DST_FOLDER/etc/systemd/system/cu.service
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/cu.service $DST_FOLDER/etc/systemd/system/cu.service
 
 echo "Enabling CU service.."
 sudo chroot $DST_FOLDER systemctl enable cu.service

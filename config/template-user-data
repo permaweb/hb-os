@@ -1,6 +1,6 @@
 #cloud-config
-hostname: sevsnpvm
-fqdn: sevsnpvm.localdomain
+hostname: hyperbeam-os
+fqdn: hyperbeam-os.localdomain
 manage_etc_hosts: false
 
 ssh_pwauth: true
