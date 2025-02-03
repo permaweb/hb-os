@@ -151,19 +151,19 @@ echo "Copying files (this may take some time).."
 copy_filesystem
 
 echo "Copying HyperBEAM.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hb $DST_FOLDER/root
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/hb $DST_FOLDER/root
 
 echo "Copy HyperBEAM service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/hyperbeam.service $DST_FOLDER/etc/systemd/system/hyperbeam.service
 
 echo "Enabling HyperBEAM service.."
 sudo chroot $DST_FOLDER systemctl enable hyperbeam.service
 
 echo "Copying CU.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu $DST_FOLDER/root
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/cu $DST_FOLDER/root
 
 echo "Copy CU service.."
-sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/hb/cu.service $DST_FOLDER/etc/systemd/system/cu.service
+sudo rsync -axHAWXS --numeric-ids --info=progress2 $BUILD_DIR/content/cu.service $DST_FOLDER/etc/systemd/system/cu.service
 
 echo "Enabling CU service.."
 sudo chroot $DST_FOLDER systemctl enable cu.service
