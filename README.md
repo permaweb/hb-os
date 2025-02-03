@@ -1,6 +1,6 @@
 # Project Build and Deployment Guide
 
-This project uses a Makefile to automate the build, setup, and deployment processes for both the host and guest environments. The following instructions explain the available commands and their purpose.
+This project uses a Python automation tool (via `run`) to automate the build, setup, and deployment processes for both the host and guest environments. This guide explains the available commands (targets) and their purposes.
 
 ---
 
@@ -8,16 +8,16 @@ This project uses a Makefile to automate the build, setup, and deployment proces
 
 ### 1. Initialization (For **Both Host and Guests**)
 
-Before any build steps, you must initialize the build environment. This target creates required directories, installs dependencies, downloads the SNP release, and builds essential tools.
+Before any build steps, you must initialize the build environment. This target creates the required directories, installs dependencies, downloads the SNP release, and builds essential tools.
 
 Run:
 ```bash
-make init
+./run init
 ```
 
 The `init` target will:
-- Create the build directories.
-- Install required dependencies via `./install-dependencies.sh`.
+- Create all necessary build directories.
+- Install required dependencies.
 - Download and extract the SNP release.
 - Build the attestation server and digest calculator using Cargo.
 
@@ -27,14 +27,14 @@ The `init` target will:
 
 ### 2. Host Setup
 
-On the **HOST** machine, you must run additional setup steps to install host-specific components (e.g., installing the SNP release).
+On the **HOST** machine, run the host-specific setup to install host components (for example, installing the SNP release).
 
 Run:
 ```bash
-make setup_host
+./run setup_host
 ```
 
-This target will change to the `build/snp-release` directory and run the host installation script (`./install.sh`).
+This target changes into the `build/snp-release` directory and runs the host installation script (`./install.sh`).
 
 ---
 
@@ -50,35 +50,35 @@ Before building the guest image, you must create the base image. This process in
 
 Run:
 ```bash
-make build_base_image
+./run build_base_image
 ```
 
-The `build_base_image` target internally calls:
-- `unpack_kernel`: Unpacks the kernel into the `$(KERNEL_DIR)` directory.
-- `initramfs`: Builds the initial ramdisk (initramfs) using Docker.
-- `create_vm`: Creates a new VM image (using a shell script in `src/guest-vm/`).
-- `run_setup`: Launches QEMU to run the setup (with defined memory, CPU, OVMF, and policy parameters).
+The `build_base_image` target performs the following sub-steps:
+- **unpack_kernel:** Unpacks the kernel into the designated kernel directory.
+- **initramfs:** Builds the initial ramdisk (initramfs) using Docker.
+- **create_vm:** Creates a new VM image.
+- **run_setup:** Launches QEMU to run the setup with specified memory, CPU, OVMF, and policy parameters.
 
 ---
 
 ### 4. Building the Guest Image
 
-Once the base image is ready, you can build the final guest image. This step will:
+Once the base image is ready, build the final guest image. This step will:
 - Build the HyperBEAM release.
 - Set up dm-verity on the base image.
-- Fetch a VM configuration template.
-- Calculate hashes from the VM configuration (used for attestation).
+- Generate a VM configuration file.
+- Compute measurement hashes from the VM configuration (for attestation).
 
 Run:
 ```bash
-make build_guest_image
+./run build_guest_image
 ```
 
 The `build_guest_image` target runs these sub-targets:
-- `build_hb_release`: Releases the HyperBEAM components.
-- `setup_verity`: Sets up dm-verity on the base image.
-- `fetch_vm_config_template`: Copies the VM configuration template and customizes it.
-- `get_hashes`: Runs the digest calculator to produce a measurement file.
+- **build_content:** Builds the guest content.
+- **setup_verity:** Sets up dm-verity on the base image.
+- **setup_vm_config:** Creates and customizes the VM configuration file.
+- **get_hashes:** Executes the digest calculator to produce a measurement file.
 
 ---
 
@@ -90,60 +90,45 @@ After building the guest image, you can run the guest environment using QEMU wit
 
 Run:
 ```bash
-make run
+./run run
 ```
 
-This command will launch QEMU with the following:
-- The verity image and hash tree.
+This command launches QEMU with the following:
+- The dm-verity image and its hash tree.
 - The generated VM configuration.
-- Ports and debugging options as specified in the Makefile.
-
-For a release version of the guest, you may also use:
-```bash
-make run_release
-```
-
----
-
-## Additional Helper Commands
-
-The Makefile provides several helper targets:
-- **attest_verity_vm**: Attest the verity-enabled VM.
-- **ssh**: SSH into the guest machine using the configured port and SSH keys.
-- **package_base** and **package_guest**: Package the base or guest images for distribution.
-- **clean**: Remove the build directory and all build artifacts.
-
-Use these targets as needed for further operations or troubleshooting.
+- Specified ports and debugging options from your configuration.
 
 ---
 
 ## Summary of Commands
 
-- **For both host and guests:**  
+- **Initialization (for both host and guests):**
   ```bash
-  make init
+  ./run init
   ```
 
-- **For HOST:**  
+- **Host Setup:**
   ```bash
-  make setup_host
+  ./run setup_host
   ```
 
-- **For Building Base Image (prerequisite to building guest image):**  
+- **Build Base Image:**
   ```bash
-  make build_base_image
+  ./run build_base_image
   ```
 
-- **For Building Guest Image:**  
+- **Build Guest Image:**
   ```bash
-  make build_guest_image
+  ./run build_guest_image
   ```
 
-- **For running the guest:**  
+- **Run Guest:**
   ```bash
-  make run
+  ./run run
   ```
 
----
-
-Follow these steps in order to set up and deploy the project correctly. For any issues or further customization, please refer to the individual Makefile targets or consult the project documentation.
+- **Other Targets:**  
+  ```bash
+  ./run ssh
+  ./run clean
+  ```
