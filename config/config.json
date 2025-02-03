@@ -1,0 +1,79 @@
+{
+  "DIRECTORIES": {
+    "build": "build",
+    "build_bin": "${build}/bin",
+    "build_content": "${build}/content",
+    "build_guest": "${build}/guest",
+    "build_kernel": "${build}/kernel",
+    "build_verity": "${build}/verity",
+    "build_snp": "${build}/snp-release",
+    "resources": "resources",
+    "release": "release",
+    "config": "config"
+  },
+  "BASE_IMAGE": {
+    "name": "base_image.qcow2",
+    "path": "${build_guest}/base_image.qcow2",
+    "cloud_config": "${build_guest}/config-blob.img",
+    "template_user_data": "${config}/template-user-data"
+  },
+  "KERNEL": {
+    "deb": "${build_snp}/linux/guest/linux-image-*.deb",
+    "vmlinuz": "${build_kernel}/boot/vmlinuz-*",
+    "ovmf": "${build_snp}/usr/local/share/qemu/DIRECT_BOOT_OVMF.fd",
+    "cmdline": "console=ttyS0 earlyprintk=serial root=/dev/sda"
+  },
+  "INIT": {
+    "initrd": "${build}/initramfs.cpio.gz",
+    "script": "${resources}/init.sh",
+    "docker": "${resources}/initramfs.Dockerfile"
+  },
+  "CONTENT":{
+    "docker": "${resources}/content.Dockerfile"
+  },
+  "QEMU": {
+    "launch_script": "./launch.sh",
+    "snp_params": "-sev-snp",
+    "memory": "4096",
+    "hb_port": "80",
+    "qemu_port": "4444"
+  },
+  "VM": {
+    "config_file": "${build_guest}/vm-config.toml",
+    "config_params": "-ovmf $(realpath ${build_snp}/usr/local/share/qemu/DIRECT_BOOT_OVMF.fd) -kernel $(realpath ${build_kernel}/boot/vmlinuz-*) -initrd $(realpath ${build}/initramfs.cpio.gz) -template ${build_guest}/vm-config-template.toml -cpus 1 -policy 0x30000"
+  },
+  "VERITY": {
+    "image": "${build_verity}/image.qcow2",
+    "hash_tree": "${build_verity}/hash_tree.bin",
+    "root_hash": "${build_verity}/roothash.txt",
+    "params": "boot=verity verity_disk=/dev/sdb verity_roothash='cat ${build_verity}/roothash.txt'"
+  },
+  "RELEASE": {
+    "image": "${release}/image.qcow2",
+    "hash_tree": "${release}/hash_tree.bin",
+    "config": "${release}/vm-config.toml"
+  },
+  "NETWORK": {
+    "vm_host": "localhost",
+    "vm_port": "2222",
+    "vm_user": "ubuntu",
+    "ssh_hosts_file": "${build}/known_hosts"
+  },
+  "VM_CONFIG": {
+    "host_cpu_family": "Milan",
+    "vcpu_count": 1,
+    "guest_features": "0x1",
+    "platform_info": "0x3",
+    "guest_policy": "0x30000",
+    "family_id": "00000000000000000000000000000000",
+    "image_id": "00000000000000000000000000000000",
+    "min_commited_tcb": {
+      "bootloader": 4,
+      "tee": 0,
+      "snp": 22,
+      "microcode": 213,
+      "_reserved": [0, 0, 0, 0]
+    }
+  },
+  "DEBUG": 0
+}

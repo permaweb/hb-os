@@ -1,3 +1,5 @@
+# DO NOT MODIFY SCRIPT HANDLES IT!
+
 # Name of the CPU generation running the VM. Relevant for selecting the correct
 # certificate chain when veryfing the attestation report
 host_cpu_family = "Milan"
