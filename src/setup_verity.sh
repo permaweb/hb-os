@@ -17,8 +17,6 @@ NON_INTERACTIVE=""
 SCRIPT_PATH=$(realpath `dirname $0`)
 . $SCRIPT_PATH/common.sh
 
-BUILD_DIR=$SCRIPT_PATH/../../build
-
 trap clean_up EXIT
 
 
@@ -118,6 +116,9 @@ while [ -n "$1" ]; do
 			shift
 			;;
 		-out-root-hash) ROOT_HASH="$2"
+			shift
+			;;
+        -build-dir) BUILD_DIR="$2"
 			shift
 			;;
         -debug) DEBUG="$2"

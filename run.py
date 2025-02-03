@@ -175,6 +175,7 @@ def build_content(config):
 def setup_verity(config):
     os.makedirs(config["DIRECTORIES"]["build_verity"], exist_ok=True)
 
+    build_dir = config["DIRECTORIES"]["build"]
     image = config["BASE_IMAGE"]["path"]
     verity_image = config["VERITY"]["image"]
     verity_hash_tree = config["VERITY"]["hash_tree"]
@@ -188,6 +189,7 @@ def setup_verity(config):
         f"-out-image {verity_image} "
         f"-out-hash-tree {verity_hash_tree} "
         f"-out-root-hash {verity_root_hash} "
+        f"-build-dir {build_dir} "
         f"-debug {debug}"
     )
     run_command(cmd)
