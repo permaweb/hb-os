@@ -57,7 +57,6 @@ def load_config(config_file="config.json"):
     directories = config.get("DIRECTORIES", {})
     # Recursively interpolate all placeholders in the config
     processed_config = recursive_interpolate(config, directories)
-    print("Processed config:" + json.dumps(processed_config, indent=2))
 
     return processed_config
 
@@ -167,11 +166,11 @@ def build_content(config):
     build_guest_content(out_dir, dockerfile)
 
 def setup_verity(config):
-    image = config["IMAGES"]["path"]
+    image = config["BASE_IMAGE"]["image"]
     verity_image = config["VERITY"]["image"]
     verity_hash_tree = config["VERITY"]["hash_tree"]
     verity_root_hash = config["VERITY"]["root_hash"]
-    debug = config["RESOURCES"]["debug"]
+    debug = config["DEBUG"]
 
     setup_guest_image(image, verity_image, verity_hash_tree, verity_root_hash, debug)
 
@@ -206,11 +205,11 @@ def build_guest_image(config):
 
 def run_vm(config):
     build_dir = config["DIRECTORIES"]["build"]
-    hb_port = config["RESOURCES"]["hb_port"]
-    qemu_port = config["RESOURCES"]["qemu_port"]
-    debug = config["RESOURCES"]["debug"]
-    memory = config["RESOURCES"]["memory"]
-    cpus = config["RESOURCES"]["cpus"]
+    hb_port = config["QEMU"]["hb_port"]
+    qemu_port = config["QEMU"]["qemu_port"]
+    debug = config["DEBUG"]
+    memory = config["QEMU"]["memory"]
+    cpus = config["VM_CONFIG"]["cpus"]
     qemu_launch_script = config["QEMU"]["launch_script"]
     qemu_snp_params = config["QEMU"]["snp_params"]
 
