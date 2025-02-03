@@ -184,7 +184,7 @@ def setup_verity(config):
 
     # Build the command string. Make sure that the relative path to the script is correct.
     cmd = (
-        f"./src/guest-vm/setup_verity.sh "
+        f"./src/setup_verity.sh "
         f"-image {image} "
         f"-out-image {verity_image} "
         f"-out-hash-tree {verity_hash_tree} "
