@@ -265,8 +265,8 @@ def start_release_vm():
 def package_release():
     """
     Package all files needed for starting the VM (as used in start_vm) into a release folder,
-    then create a tar.gz archive of that folder. This includes the verity image, hash tree,
-    and VM configuration file.
+    then create a tar.gz archive of that folder with progress output. This includes the verity image,
+    hash tree, and VM configuration file.
     """
     # Define the release directory path relative to the current working directory.
     release_dir = os.path.join(os.getcwd(), "release")
@@ -290,9 +290,18 @@ def package_release():
     # Define the path for the tar.gz archive.
     tar_path = os.path.join(os.getcwd(), "release.tar.gz")
     
-    # Create a tar.gz archive of the release folder.
+    # Create a tar.gz archive of the release folder with progress output.
+    print(f"Packaging release folder into {tar_path} ...")
     with tarfile.open(tar_path, "w:gz") as tar:
-        tar.add(release_dir, arcname="release")
+        # Walk through the release directory to add files individually.
+        for root, dirs, files in os.walk(release_dir):
+            for file in files:
+                full_path = os.path.join(root, file)
+                # Compute the archive name relative to the release folder.
+                arcname = os.path.relpath(full_path, os.path.dirname(release_dir))
+                print(f"Adding {arcname} ...")
+                tar.add(full_path, arcname=arcname)
+    
     print(f"Packaged release folder into {tar_path}")
 
 def download_release(url):
