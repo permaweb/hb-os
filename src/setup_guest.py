@@ -254,9 +254,8 @@ def prepare_verity_fs():
         subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "mask", "ssh.service"], check=True)
 
         # Disable login for all users except root by editing /etc/passwd
-        print("Disabling login for all users except root...")
-        sed_cmd = ("sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:/bin/bash$/ "
-                   "s/\\/bin\\/bash/\\/usr\\/sbin\\/nologin/' " + os.path.join(DST_FOLDER, "etc", "passwd"))
+        passwd_file = os.path.join(DST_FOLDER, "etc", "passwd")
+        sed_cmd = ("sudo sed -i '/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\\/bin\\/bash$/ s/\\/bin\\/bash/\\/usr\\/sbin\\/nologin/' " + passwd_file)
         subprocess.run(sed_cmd, shell=True, check=True)
 
         # Disable all TTY services (tty1 through tty6)
