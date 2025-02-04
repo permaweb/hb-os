@@ -406,10 +406,13 @@ def setup_guest(src_image, build_dir, out_image,
     print("Computing hash tree..")
     cmd = "sudo veritysetup format {} {} | grep Root | cut -f2".format(DST_DEVICE, HASH_TREE)
     try:
-        root_hash_value = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+        root_hash_value = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     except subprocess.CalledProcessError:
         print("Error computing hash tree.")
         sys.exit(1)
+
+    # Remove extra whitespace and any trailing '%' characters.
+    root_hash_value = root_hash_value.strip().rstrip('%')
     with open(ROOT_HASH, "w") as f:
         f.write(root_hash_value)
     print("Root hash: " + root_hash_value)
