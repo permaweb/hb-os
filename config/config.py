@@ -4,7 +4,7 @@ import os
 config = {
     # Debugging and KVM.
     "debug": "0",
-    "enable_kvm": "0",
+    "enable_kvm": "1",
     
     # Image Files.
     "base_image": "base.qcow2",
