@@ -30,7 +30,7 @@ UEFI_CODE=""
 UEFI_VARS=""
 
 
-JSON_FILE=./build/measurement-inputs.json
+JSON_FILE=./inputs.json
 
 usage() {
 	echo "$0 [options]"
