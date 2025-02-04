@@ -131,7 +131,7 @@ class Config:
                 roothash = f.read().strip()
         except Exception:
             roothash = "unknown"
-        return f"boot=verity verity_disk=/dev/sdb verity_roothash='{roothash}'"
+        return f"boot=verity verity_disk=/dev/sdb verity_roothash={roothash}"
 
 
 # Create a single instance to be used throughout your project.
