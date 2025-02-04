@@ -47,7 +47,7 @@ def init():
       - Download and extract SNP release.
       - Build attestation server and digest calculator.
     """
-    
+
     # Go thru all config.dir and create the directories if they don't exist
     for d in config.dir.__dict__.values():
         if isinstance(d, str):
@@ -92,7 +92,9 @@ def create_vm():
     guest_dir = config.dir.guest
     image_name = config.vm_image_base_name
     template_user_data = config.vm_template_user_data
-    create_vm_image(new_vm=image_name, build_dir=guest_dir, template_user_data=template_user_data)
+    create_vm_image(
+        new_vm=image_name, build_dir=guest_dir, template_user_data=template_user_data
+    )
 
 
 def unpack_kernel():
@@ -157,7 +159,9 @@ def get_hashes():
     """
     digest_calc_path = os.path.join(config.dir.bin, "digest_calc")
     out_file = os.path.join(config.dir.build, "measurement-inputs.json")
-    run_command(f"{digest_calc_path} --vm-definition {config.vm_config_file} > {out_file}")
+    run_command(
+        f"{digest_calc_path} --vm-definition {config.vm_config_file} > {out_file}"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -214,25 +218,6 @@ def setup_verity():
         out_root_hash=config.verity_root_hash,
         debug=config.debug,
     )
-    
-    # os.makedirs(config.dir.verity, exist_ok=True)
-    # build_dir = config.dir.build
-    # image = config.vm_image_base_path
-    # verity_image = config.verity_image
-    # verity_hash_tree = config.verity_hash_tree
-    # verity_root_hash = config.verity_root_hash
-    # debug_flag = config.debug
-
-    # cmd = (
-    #     f"./src/setup_verity.sh "
-    #     f"-image {image} "
-    #     f"-out-image {verity_image} "
-    #     f"-out-hash-tree {verity_hash_tree} "
-    #     f"-out-root-hash {verity_root_hash} "
-    #     f"-build-dir {build_dir} "
-    #     f"-debug {debug_flag}"
-    # )
-    # run_command(cmd)
 
 
 # -----------------------------------------------------------------------------
@@ -250,7 +235,7 @@ def run_setup():
     run_command(cmd)
 
 
-def run_vm():
+def start_vm():
     """
     Run the VM using QEMU with the guest image configuration.
     """
@@ -274,11 +259,9 @@ def ssh_vm():
     """
     SSH into the virtual machine.
     """
-    vm_port = config.network_vm_port
-    ssh_hosts_file = config.ssh_hosts_file
-    vm_user = config.network_vm_user
-    vm_host = config.network_vm_host
-    run_command(f"ssh -p {vm_port} -o UserKnownHostsFile={ssh_hosts_file} {vm_user}@{vm_host}")
+    run_command(
+        f"ssh -p {config.network_vm_port} -o UserKnownHostsFile={config.ssh_hosts_file} {config.network_vm_user}@{config.network_vm_host}"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -289,7 +272,9 @@ def run_release():
     Stub: Run the VM in release mode.
     Currently, this simply calls run_vm.
     """
-    print("===> run_release target: Not implemented separately, running run_vm instead.")
+    print(
+        "===> run_release target: Not implemented separately, running run_vm instead."
+    )
 
 
 def clean():
@@ -313,9 +298,10 @@ def main():
         "target",
         choices=[
             "init",
-            "build_base_image",
-            "build_guest_image",
-            "run",
+            "setup_host",
+            "build_base",
+            "build_guest",
+            "start",
             "ssh",
             "clean",
         ],
@@ -326,9 +312,9 @@ def main():
     targets = {
         "init": init,
         "setup_host": setup_host,
-        "build_base_image": build_base_image,
-        "build_guest_image": build_guest_image,
-        "run": run_vm,
+        "build_base": build_base_image,
+        "build_guest": build_guest_image,
+        "start": start_vm,
         "ssh": ssh_vm,
         "clean": clean,
     }
