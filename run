@@ -262,11 +262,35 @@ def start_release_vm():
     )
     run_command(cmd)
 
+
+# Custom progress wrapper to show file read progress without external packages.
+class ProgressFileWrapper:
+    def __init__(self, fileobj, total, desc="Adding file"):
+        self.fileobj = fileobj
+        self.total = total
+        self.desc = desc
+        self.read_bytes = 0
+        self.last_percent = -1
+
+    def read(self, size):
+        data = self.fileobj.read(size)
+        self.read_bytes += len(data)
+        percent = int((self.read_bytes / self.total) * 100)
+        if percent != self.last_percent:
+            self.last_percent = percent
+            # Print progress update on the same line.
+            sys.stdout.write(f"\r{self.desc}: {percent}% complete")
+            sys.stdout.flush()
+        return data
+
+    def __getattr__(self, attr):
+        return getattr(self.fileobj, attr)
+
 def package_release():
     """
     Package all files needed for starting the VM (as used in start_vm) into a release folder,
-    then create a tar.gz archive of that folder with progress output. This includes the verity image,
-    hash tree, and VM configuration file.
+    then create a tar.gz archive of that folder with progress output for large files.
+    This includes the verity image, hash tree, and VM configuration file.
     """
     # Define the release directory path relative to the current working directory.
     release_dir = os.path.join(os.getcwd(), "release")
@@ -291,18 +315,28 @@ def package_release():
     tar_path = os.path.join(os.getcwd(), "release.tar.gz")
     
     # Create a tar.gz archive of the release folder with progress output.
-    print(f"Packaging release folder into {tar_path} ...")
+    print(f"\nPackaging release folder into {tar_path} ...")
     with tarfile.open(tar_path, "w:gz") as tar:
         # Walk through the release directory to add files individually.
         for root, dirs, files in os.walk(release_dir):
             for file in files:
                 full_path = os.path.join(root, file)
-                # Compute the archive name relative to the release folder.
+                # Compute the archive name relative to the parent of the release folder.
                 arcname = os.path.relpath(full_path, os.path.dirname(release_dir))
-                print(f"Adding {arcname} ...")
-                tar.add(full_path, arcname=arcname)
+                print(f"\nAdding {arcname} ...")
+                file_size = os.path.getsize(full_path)
+                # If the file is large (e.g., > 10 MB), use the progress wrapper.
+                if file_size > 10 * 1024 * 1024:
+                    with open(full_path, "rb") as f:
+                        wrapped_file = ProgressFileWrapper(f, file_size, desc=f"Adding {arcname}")
+                        tarinfo = tar.gettarinfo(name=full_path, arcname=arcname)
+                        tar.addfile(tarinfo, fileobj=wrapped_file)
+                    # Print a newline after finishing progress for this file.
+                    sys.stdout.write("\n")
+                else:
+                    tar.add(full_path, arcname=arcname)
     
-    print(f"Packaged release folder into {tar_path}")
+    print(f"\nPackaged release folder into {tar_path}")
 
 def download_release(url):
     """
