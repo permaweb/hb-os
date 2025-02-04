@@ -47,6 +47,9 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
     # Create a copy in the build directory with the new VM name.
     new_vm_path = os.path.join(build_dir, new_vm)
     print(f"Copying base image to {new_vm_path} …")
+    # Remove the existing file if it exists.
+    if os.path.exists(new_vm_path):
+        os.remove(new_vm_path)
     shutil.copy2(base_disk, new_vm_path)
 
     # Resize the new VM disk image using qemu-img.
