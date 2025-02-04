@@ -18,6 +18,7 @@ from src.create_new_vm import create_vm_image
 from src.build_initramfs import build_initramfs
 from src.build_content import build_guest_content
 from src.create_vm_config import create_vm_config_file
+from src.setup_guest import setup_guest
 
 
 # -----------------------------------------------------------------------------
@@ -205,24 +206,33 @@ def setup_verity():
     """
     Set up verity by running the verity setup shell script.
     """
-    os.makedirs(config.dir.verity, exist_ok=True)
-    build_dir = config.dir.build
-    image = config.vm_image_base_path
-    verity_image = config.verity_image
-    verity_hash_tree = config.verity_hash_tree
-    verity_root_hash = config.verity_root_hash
-    debug_flag = config.debug
-
-    cmd = (
-        f"./src/setup_verity.sh "
-        f"-image {image} "
-        f"-out-image {verity_image} "
-        f"-out-hash-tree {verity_hash_tree} "
-        f"-out-root-hash {verity_root_hash} "
-        f"-build-dir {build_dir} "
-        f"-debug {debug_flag}"
+    setup_guest(
+        src_image=config.vm_image_base_path,
+        build_dir=config.dir.build,
+        out_image=config.verity_image,
+        out_hash_tree=config.verity_hash_tree,
+        out_root_hash=config.verity_root_hash,
+        debug=config.debug,
     )
-    run_command(cmd)
+    
+    # os.makedirs(config.dir.verity, exist_ok=True)
+    # build_dir = config.dir.build
+    # image = config.vm_image_base_path
+    # verity_image = config.verity_image
+    # verity_hash_tree = config.verity_hash_tree
+    # verity_root_hash = config.verity_root_hash
+    # debug_flag = config.debug
+
+    # cmd = (
+    #     f"./src/setup_verity.sh "
+    #     f"-image {image} "
+    #     f"-out-image {verity_image} "
+    #     f"-out-hash-tree {verity_hash_tree} "
+    #     f"-out-root-hash {verity_root_hash} "
+    #     f"-build-dir {build_dir} "
+    #     f"-debug {debug_flag}"
+    # )
+    # run_command(cmd)
 
 
 # -----------------------------------------------------------------------------
@@ -306,13 +316,8 @@ def main():
             "build_base_image",
             "build_guest_image",
             "run",
-            "run_release",
             "ssh",
             "clean",
-            "build_content",
-            "setup_vm_config",
-            "get_hashes",
-            "setup_verity",
         ],
         help="Target task to execute",
     )
@@ -324,14 +329,8 @@ def main():
         "build_base_image": build_base_image,
         "build_guest_image": build_guest_image,
         "run": run_vm,
-        "run_release": run_release,
         "ssh": ssh_vm,
         "clean": clean,
-        
-        "build_content": build_content,
-        "setup_vm_config": setup_vm_config,
-        "get_hashes": get_hashes,
-        "setup_verity": setup_verity,
     }
 
     task = targets.get(args.target)

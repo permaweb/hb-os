@@ -1,6 +1,11 @@
 build
 release
 
+*__pycache__
+
+*target
+*Cargo.lock
+
 .cache/
 tools/attestation_server/target
 AMDSEV/
