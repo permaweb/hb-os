@@ -310,12 +310,11 @@ def download_release(url):
     Download a tar.gz release from the provided URL and extract it into the release folder.
     """
     release_dir = os.path.join(os.getcwd(), "release") 
-    # Clean up the release folder if it exists
+    # Remove the entire release directory if it exists.
     if os.path.exists(release_dir):
         shutil.rmtree(release_dir)
-    os.makedirs(release_dir, exist_ok=True)
 
-    tarball_path = os.path.join(release_dir, "release_download.tar.gz")
+    tarball_path = os.path.join(os.getcwd(), "release_download.tar.gz")
     print(f"Downloading release from {url} ...")
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
@@ -323,10 +322,10 @@ def download_release(url):
             shutil.copyfileobj(r.raw, f)
     print(f"Downloaded tarball to {tarball_path}")
 
-    print(f"Extracting {tarball_path} to {release_dir} ...")
+    print(f"Extracting {tarball_path} to {os.getcwd()} ...")
     # Extract the tar.gz file
     with tarfile.open(tarball_path, "r:gz") as tar:
-        tar.extractall(path=release_dir)
+        tar.extractall(path=os.getcwd())
     os.remove(tarball_path)
     print("Extraction complete.")
 
