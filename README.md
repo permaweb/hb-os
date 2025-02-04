@@ -1,134 +1,213 @@
-# Project Build and Deployment Guide
+# VM Automation Tool
 
-This project uses a Python automation tool (via `run`) to automate the build, setup, and deployment processes for both the host and guest environments. This guide explains the available commands (targets) and their purposes.
+This automation tool builds and runs virtual machine images. It replaces traditional Makefile tasks with an updated configuration and improved readability. The tool handles everything from setting up the build environment and installing dependencies to creating VM images and launching QEMU.
 
 ---
 
-## Initialization Steps
+## Table of Contents
 
-### 1. Initialization (For **Both Host and Guests**)
+- [VM Automation Tool](#vm-automation-tool)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Prerequisites](#prerequisites)
+    - [BIOS Configuration](#bios-configuration)
+    - [Checking Configuration](#checking-configuration)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Available Targets](#available-targets)
+    - [Example Commands](#example-commands)
+  - [Project Structure](#project-structure)
 
-Before any build steps, you must initialize the build environment. This target creates the required directories, installs dependencies, downloads the SNP release, and builds essential tools.
+---
 
-Run:
+## Overview
+
+This tool automates tasks such as:
+
+- Initializing the build environment
+- Installing dependencies
+- Downloading and extracting the SNP release tarball
+- Building attestation server binaries and a digest calculator
+- Creating and configuring VM images
+- Building the initramfs
+- Setting up guest content and verity
+- Running the VM via QEMU
+- Cleaning up the build directory
+
+It integrates multiple components (found in the `src/` directory) and uses configuration parameters defined in `config/config.py`.
+
+---
+
+## Features
+
+- **Initialization**: Creates required directories and installs system dependencies.
+- **SNP Release Handling**: Downloads, extracts, and builds SNP release components.
+- **Kernel & Initramfs**: Unpacks the kernel package and builds the initramfs image.
+- **VM Image Creation**: Uses a template to create a new VM image.
+- **Guest Content Build**: Builds the guest content (via Docker) and sets up dm-verity.
+- **VM Configuration**: Creates configuration files for the VM.
+- **Hash Measurements**: Generates measurement inputs using a digest calculator.
+- **VM Execution**: Launches QEMU with both base and guest image configurations.
+- **Host Setup**: Installs the SNP release on the host.
+- **Cleanup**: Cleans the build directory when needed.
+
+---
+
+## Prerequisites
+
+### BIOS Configuration
+
+Some BIOS settings are required in order to use SEV-SNP. The settings slightly
+differ from machine to machine, but make sure to check the following options:
+
+- `Secure Nested Paging`: to enable SNP
+- `Secure Memory Encryption`: to enable SME (not strictly required for running
+  SNP guests)
+- `SNP Memory Coverage`: needs to be enabled to reserve space for the Reverse
+  Map Page Table (RMP). [Source](https://github.com/AMDESE/AMDSEV/issues/68)
+- `Minimum SEV non-ES ASID`: this option configures the minimum address space ID
+  used for non-ES SEV guests. By setting this value to 1 you are allocating all
+  ASIDs for normal SEV guests, and it would not be possible to enable SEV-ES and
+  SEV-SNP. So, this value should be greater than 1.
+
+### Checking Configuration
+
 ```bash
-./run init
+# Check kernel version
+uname -r
+# 6.9.0-rc7-snp-host-05b10142ac6a
+
+# Check if SEV is among the CPU flags
+grep -w sev /proc/cpuinfo
+# flags           : ...
+# flush_l1d sme sev sev_es sev_snp
+
+# Check if SEV, SEV-ES and SEV-SNP are available in KVM
+cat /sys/module/kvm_amd/parameters/sev
+# Y
+cat /sys/module/kvm_amd/parameters/sev_es 
+# Y
+cat /sys/module/kvm_amd/parameters/sev_snp 
+# Y
+
+# Check if SEV is enabled in the kernel
+sudo dmesg | grep -i -e rmp -e sev
+# SEV-SNP: RMP table physical range [0x000000bf7e800000 - 0x000000c03f0fffff]
+# SEV-SNP: Reserving start/end of RMP table on a 2MB boundary [0x000000c03f000000]
+# ccp 0000:01:00.5: sev enabled
+# ccp 0000:01:00.5: SEV firmware update successful
+# ccp 0000:01:00.5: SEV API:1.55 build:21
+# ccp 0000:01:00.5: SEV-SNP API:1.55 build:21
+# kvm_amd: SEV enabled (ASIDs 510 - 1006)
+# kvm_amd: SEV-ES enabled (ASIDs 1 - 509)
+# kvm_amd: SEV-SNP enabled (ASIDs 1 - 509)
 ```
 
-The `init` target will:
-- Create all necessary build directories.
-- Install required dependencies.
-- Download and extract the SNP release.
-- Build the attestation server and digest calculator using Cargo.
+---
+
+## Installation
+
+1. **Clone the Repository:**
+
+2. **Ensure System Dependencies:**
+
+   The tool will install many system dependencies automatically during the `init` target, but you may need to have some pre-installed (like QEMU, Cargo, etc.).
 
 ---
 
-## Host Setup
+## Usage
 
-### 2. Host Setup
+This tool is driven by command-line targets. To run the tool, use:
 
-On the **HOST** machine, run the host-specific setup to install host components (for example, installing the SNP release).
-
-Run:
 ```bash
-./run setup_host
+./run <target>
 ```
 
-This target changes into the `build/snp-release` directory and runs the host installation script (`./install.sh`).
+### Available Targets
 
----
+- **init**:  
+  Initializes the build environment, creates directories, installs dependencies, downloads and extracts the SNP release tarball, and builds attestation server binaries and the digest calculator.
 
-## Building the Images
+- **setup_host**:  
+  This target prepares the host machine for running virtualization with SEV-SNP features.
 
-### 3. Building the Base Image
+- **build_base_image**:  
+  Unpacks the kernel, builds the initramfs, creates the base VM image, and runs QEMU setup.
 
-Before building the guest image, you must create the base image. This process involves:
-- Unpacking the kernel from the downloaded Debian package.
-- Building the initramfs.
-- Creating a new VM image.
-- Running a setup script to configure the VM.
+- **build_guest_image**:  
+  Builds the guest content, sets up dm-verity, creates the VM configuration file, and generates hash measurements.
 
-Run:
-```bash
-./run build_base_image
-```
+- **start**:  
+  Starts the VM using QEMU with the guest image configuration.
 
-The `build_base_image` target performs the following sub-steps:
-- **unpack_kernel:** Unpacks the kernel into the designated kernel directory.
-- **initramfs:** Builds the initial ramdisk (initramfs) using Docker.
-- **create_vm:** Creates a new VM image.
-- **run_setup:** Launches QEMU to run the setup with specified memory, CPU, OVMF, and policy parameters.
+- **clean**:  
+  Cleans up the build directory.
 
----
+### Example Commands
 
-### 4. Building the Guest Image
+- **Initialize the Environment:**
 
-Once the base image is ready, build the final guest image. This step will:
-- Build the HyperBEAM release.
-- Set up dm-verity on the base image.
-- Generate a VM configuration file.
-- Compute measurement hashes from the VM configuration (for attestation).
-
-Run:
-```bash
-./run build_guest_image
-```
-
-The `build_guest_image` target runs these sub-targets:
-- **build_content:** Builds the guest content.
-- **setup_verity:** Sets up dm-verity on the base image.
-- **setup_vm_config:** Creates and customizes the VM configuration file.
-- **get_hashes:** Executes the digest calculator to produce a measurement file.
-
----
-
-## Running the Guest
-
-### 5. Running the Guest
-
-After building the guest image, you can run the guest environment using QEMU with SNP parameters.
-
-Run:
-```bash
-./run run
-```
-
-This command launches QEMU with the following:
-- The dm-verity image and its hash tree.
-- The generated VM configuration.
-- Specified ports and debugging options from your configuration.
-
----
-
-## Summary of Commands
-
-- **Initialization (for both host and guests):**
   ```bash
   ./run init
   ```
 
-- **Host Setup:**
+- **Setup Host Machine:**
+
   ```bash
   ./run setup_host
   ```
 
-- **Build Base Image:**
+- **Build the Base VM Image:**
+
   ```bash
-  ./run build_base_image
+  ./run build_base
   ```
 
-- **Build Guest Image:**
+- **Build the Guest Image:**
+
   ```bash
-  ./run build_guest_image
+  ./run build_guest
   ```
 
-- **Run Guest:**
+- **Run the VM:**
+
   ```bash
-  ./run run
+  ./run start
   ```
 
-- **Other Targets:**  
+- **Clean the Build Directory:**
+
   ```bash
-  ./run ssh
   ./run clean
   ```
+
+---
+
+## Project Structure
+
+```yaml
+├── config                      
+│   ├── config.py                 # Configuration Options
+│   └── template-user-data
+├── examples
+│   └── vm-config-template.toml
+├── resources
+│   ├── content.Dockerfile
+│   ├── cu.service
+│   ├── hyperbeam.service
+│   ├── init.sh
+│   └── initramfs.Dockerfile
+├── src
+│   ├── build_content.py
+│   ├── build_initramfs.py
+│   ├── create_new_vm.py
+│   ├── create_vm_config.py
+│   ├── dependencies.py
+│   └── setup_guest.py
+├── tools
+│   ├── attestation_server
+│   └── digest_calc
+├── launch.sh                    # QEMU Launch VM (Called by Run)
+└── run                          # Entry Point
+```

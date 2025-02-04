@@ -205,6 +205,9 @@ while [ -n "$1" ]; do
 		-qemu-port) QEMU_PORT="$2"
 			shift
 			;;
+		-enable-kvm) ENABLE_KVM="$2"
+			shift
+			;;
 		-debug) DEBUG="$2"
 			shift
 			;;
@@ -331,7 +334,11 @@ rm -rf $QEMU_CMDLINE
 add_opts "$QEMU_EXE"
 
 # Basic virtual machine property
-add_opts "-enable-kvm -cpu ${CPU_MODEL} -machine q35"
+if [ "$ENABLE_KVM" = "1" ]; then
+	add_opts "-enable-kvm -cpu ${CPU_MODEL} -machine q35"
+else
+	add_opts "-cpu ${CPU_MODEL} -machine q35"
+fi
 
 # add number of VCPUs
 [ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=255"
@@ -550,7 +557,7 @@ else
 		echo "Launching QEMU in debug mode..."
 		bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
 	fi
-	sleep 20
+	sleep 50
 	ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
 	scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
 	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost \
