@@ -1,4 +1,4 @@
-# VM Automation Tool
+# HyperBEAM OS
 
 This automation tool builds and runs virtual machine images. It replaces traditional Makefile tasks with an updated configuration and improved readability. The tool handles everything from setting up the build environment and installing dependencies to creating VM images and launching QEMU.
 
@@ -6,14 +6,13 @@ This automation tool builds and runs virtual machine images. It replaces traditi
 
 ## Table of Contents
 
-- [VM Automation Tool](#vm-automation-tool)
+- [HyperBEAM OS](#hyperbeam-os)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Features](#features)
   - [Prerequisites](#prerequisites)
     - [BIOS Configuration](#bios-configuration)
     - [Checking Configuration](#checking-configuration)
-  - [Installation](#installation)
   - [Usage](#usage)
     - [Available Targets](#available-targets)
     - [Example Commands](#example-commands)
@@ -31,8 +30,9 @@ This tool automates tasks such as:
 - Building attestation server binaries and a digest calculator
 - Creating and configuring VM images
 - Building the initramfs
-- Setting up guest content and verity
+- Setting up guest content and dm-verity
 - Running the VM via QEMU
+- Packaging and downloading release bundles
 - Cleaning up the build directory
 
 It integrates multiple components (found in the `src/` directory) and uses configuration parameters defined in `config/config.py`.
@@ -50,6 +50,9 @@ It integrates multiple components (found in the `src/` directory) and uses confi
 - **Hash Measurements**: Generates measurement inputs using a digest calculator.
 - **VM Execution**: Launches QEMU with both base and guest image configurations.
 - **Host Setup**: Installs the SNP release on the host.
+- **Packaging Releases**: Packages the required files into a release folder and archives them.
+- **Downloading Releases**: Downloads and extracts a release tarball from a specified URL.
+- **Release VM Execution**: Starts the VM in release mode using files from the release folder.
 - **Cleanup**: Cleans the build directory when needed.
 
 ---
@@ -58,18 +61,13 @@ It integrates multiple components (found in the `src/` directory) and uses confi
 
 ### BIOS Configuration
 
-Some BIOS settings are required in order to use SEV-SNP. The settings slightly
-differ from machine to machine, but make sure to check the following options:
+Some BIOS settings are required in order to use SEV-SNP. The settings slightly differ from machine to machine, but make sure to check the following options:
 
-- `Secure Nested Paging`: to enable SNP
-- `Secure Memory Encryption`: to enable SME (not strictly required for running
-  SNP guests)
-- `SNP Memory Coverage`: needs to be enabled to reserve space for the Reverse
-  Map Page Table (RMP). [Source](https://github.com/AMDESE/AMDSEV/issues/68)
-- `Minimum SEV non-ES ASID`: this option configures the minimum address space ID
-  used for non-ES SEV guests. By setting this value to 1 you are allocating all
-  ASIDs for normal SEV guests, and it would not be possible to enable SEV-ES and
-  SEV-SNP. So, this value should be greater than 1.
+- **Secure Nested Paging**: Enable SNP.
+- **Secure Memory Encryption**: Enable SME (not strictly required for running SNP guests).
+- **SNP Memory Coverage**: Must be enabled to reserve space for the Reverse Map Page Table (RMP).  
+  [Source](https://github.com/AMDESE/AMDSEV/issues/68)
+- **Minimum SEV non-ES ASID**: This value should be greater than 1 to allow for the enabling of SEV-ES and SEV-SNP.
 
 ### Checking Configuration
 
@@ -106,16 +104,6 @@ sudo dmesg | grep -i -e rmp -e sev
 
 ---
 
-## Installation
-
-1. **Clone the Repository:**
-
-2. **Ensure System Dependencies:**
-
-   The tool will install many system dependencies automatically during the `init` target, but you may need to have some pre-installed (like QEMU, Cargo, etc.).
-
----
-
 ## Usage
 
 This tool is driven by command-line targets. To run the tool, use:
@@ -130,7 +118,7 @@ This tool is driven by command-line targets. To run the tool, use:
   Initializes the build environment, creates directories, installs dependencies, downloads and extracts the SNP release tarball, and builds attestation server binaries and the digest calculator.
 
 - **setup_host**:  
-  This target prepares the host machine for running virtualization with SEV-SNP features.
+  Prepares the host machine for running virtualization with SEV-SNP features.
 
 - **build_base_image**:  
   Unpacks the kernel, builds the initramfs, creates the base VM image, and runs QEMU setup.
@@ -140,6 +128,15 @@ This tool is driven by command-line targets. To run the tool, use:
 
 - **start**:  
   Starts the VM using QEMU with the guest image configuration.
+
+- **package_release**:  
+  Packages all necessary files (e.g., verity image, hash tree, VM configuration) into a release folder and archives the folder as a tar.gz file.
+
+- **download_release**:  
+  Downloads a release tar.gz archive from a provided URL (via the `--url` argument) and extracts its contents into the release folder.
+
+- **start_release**:  
+  Starts the VM in release mode using the files from the release folder.
 
 - **clean**:  
   Cleans up the build directory.
@@ -170,7 +167,25 @@ This tool is driven by command-line targets. To run the tool, use:
   ./run build_guest
   ```
 
-- **Run the VM:**
+- **Package a Release:**
+
+  ```bash
+  ./run package_release
+  ```
+
+- **Download a Release:**
+
+  ```bash
+  ./run download_release --url https://example.com/path/to/release.tar.gz
+  ```
+
+- **Run the Release VM:**
+
+  ```bash
+  ./run start_release
+  ```
+
+- **Run the VM (Guest Image):**
 
   ```bash
   ./run start
@@ -208,6 +223,6 @@ This tool is driven by command-line targets. To run the tool, use:
 ├── tools
 │   ├── attestation_server
 │   └── digest_calc
-├── launch.sh                    # QEMU Launch VM (Called by Run)
-└── run                          # Entry Point
+├── launch.sh                    # QEMU Launch VM (Called by run)
+└── run                        # Entry Point
 ```

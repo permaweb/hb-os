@@ -6,10 +6,10 @@ Equivalent to the Makefile tasks, with updated configuration and improved readab
 
 import os
 import sys
-import shlex
 import argparse
 import subprocess
 import shutil
+import tarfile
 import requests
 
 from config.config import config
@@ -246,6 +246,79 @@ def start_vm():
     )
     run_command(cmd)
 
+def start_release_vm():
+    """
+    Start the VM in release mode, using files from the release folder.
+    """
+    release_dir = os.path.join(os.getcwd(), "release") 
+    verity_image = os.path.join(release_dir, os.path.basename(config.verity_image))
+    verity_hash_tree = os.path.join(release_dir, os.path.basename(config.verity_hash_tree))
+    vm_config_file = os.path.join(release_dir, os.path.basename(config.vm_config_file))
+
+    cmd = (
+        f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
+        f"-hda {verity_image} -hdb {verity_hash_tree} -load-config {vm_config_file} "
+        f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
+    )
+    run_command(cmd)
+
+def package_release():
+    """
+    Package all files needed for starting the VM (as used in start_vm) into a release folder,
+    then create a tar.gz archive of that folder. This includes the verity image, hash tree,
+    and VM configuration file.
+    """
+    # Define the release directory path relative to the current working directory.
+    release_dir = os.path.join(os.getcwd(), "release")
+    
+    # Clean up the release folder if it exists.
+    if os.path.exists(release_dir):
+        shutil.rmtree(release_dir)
+    os.makedirs(release_dir, exist_ok=True)
+    
+    # List of files to copy.
+    files_to_copy = [config.verity_image, config.verity_hash_tree, config.vm_config_file]
+    
+    # Copy each file into the release directory.
+    for file in files_to_copy:
+        if os.path.exists(file):
+            shutil.copy(file, release_dir)
+            print(f"Copied {file} to {release_dir}")
+        else:
+            print(f"Warning: {file} does not exist and cannot be copied")
+    
+    # Define the path for the tar.gz archive.
+    tar_path = os.path.join(os.getcwd(), "release.tar.gz")
+    
+    # Create a tar.gz archive of the release folder.
+    with tarfile.open(tar_path, "w:gz") as tar:
+        tar.add(release_dir, arcname="release")
+    print(f"Packaged release folder into {tar_path}")
+
+def download_release(url):
+    """
+    Download a tar.gz release from the provided URL and extract it into the release folder.
+    """
+    release_dir = os.path.join(os.getcwd(), "release") 
+    # Clean up the release folder if it exists
+    if os.path.exists(release_dir):
+        shutil.rmtree(release_dir)
+    os.makedirs(release_dir, exist_ok=True)
+
+    tarball_path = os.path.join(release_dir, "release_download.tar.gz")
+    print(f"Downloading release from {url} ...")
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(tarball_path, "wb") as f:
+            shutil.copyfileobj(r.raw, f)
+    print(f"Downloaded tarball to {tarball_path}")
+
+    print(f"Extracting {tarball_path} to {release_dir} ...")
+    # Extract the tar.gz file
+    with tarfile.open(tarball_path, "r:gz") as tar:
+        tar.extractall(path=release_dir)
+    os.remove(tarball_path)
+    print("Extraction complete.")
 
 def setup_host():
     """
@@ -261,19 +334,6 @@ def ssh_vm():
     """
     run_command(
         f"ssh -p {config.network_vm_port} -o UserKnownHostsFile={config.ssh_hosts_file} {config.network_vm_user}@{config.network_vm_host}"
-    )
-
-
-# -----------------------------------------------------------------------------
-# Stub Tasks for Future Implementation
-# -----------------------------------------------------------------------------
-def run_release():
-    """
-    Stub: Run the VM in release mode.
-    Currently, this simply calls run_vm.
-    """
-    print(
-        "===> run_release target: Not implemented separately, running run_vm instead."
     )
 
 
@@ -302,12 +362,25 @@ def main():
             "build_base",
             "build_guest",
             "start",
+            "start_release",
+            "package_release",
+            "download_release",
             "ssh",
             "clean",
         ],
         help="Target task to execute",
     )
+    parser.add_argument(
+        "--url",
+        help="URL to a tar.gz release file (required for download_release target)"
+    )
     args = parser.parse_args()
+
+    if args.target == "download_release":
+        if not args.url:
+            parser.error("The download_release target requires the --url argument.")
+        download_release(args.url)
+        sys.exit(0)
 
     targets = {
         "init": init,
@@ -315,6 +388,8 @@ def main():
         "build_base": build_base_image,
         "build_guest": build_guest_image,
         "start": start_vm,
+        "start_release": start_release_vm,
+        "package_release": package_release,
         "ssh": ssh_vm,
         "clean": clean,
     }
