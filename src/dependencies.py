@@ -154,6 +154,7 @@ def install_dependencies(force=False):
             info("Getting Rust toolchain. We recommend choosing the default install option.")
             time.sleep(5)
             run_command("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh")
+            run_command(". \"$HOME/.cargo/env\"")
         else:
             print("Seems like Rust is already installed, skipping.")
 
