@@ -59,7 +59,7 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     cd /build/ao && \
     git sparse-checkout init --cone && \
     git sparse-checkout set servers/cu && \
-    git checkout && \
+    git checkout tillathehun0/cu-experimental && \
     cp -r servers/cu /release/cu
 
 #Install Node.js (includes npm and npx)
