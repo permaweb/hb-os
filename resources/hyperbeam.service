@@ -5,7 +5,7 @@ Description=Permaweb Node
 User=root
 Type=simple
 Environment=HB_PRINT=http,debug,dev_snp
-ExecStart=/root/hb/bin/hb console --eval 'hb_http_server:start_node(#{ port=> 10000 }).'
+ExecStart=/root/hb/bin/hb console -eval 'hb_http_server:start_node(#{ port=> 10000 }).'
 Restart=on-failure
 
 [Install]
