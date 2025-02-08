@@ -62,8 +62,8 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     git checkout && \
     cp -r servers/cu /release/cu
 
-# Install Node.js (includes npm and npx)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && \
+#Install Node.js (includes npm and npx)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
     apt-get install -y nodejs && \
     node -v && npm -v
 
