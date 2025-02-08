@@ -45,7 +45,7 @@ RUN mkdir -p /build /release
 # Clone the HyperBEAM repository
 RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
     cd /build/HyperBEAM && \
-    git checkout cc47987d136486a2934b334320504a75c9b62b37
+    git checkout feat/ar1
 
 # Compile the application code using Rebar3
 RUN cd /build/HyperBEAM && \
@@ -71,6 +71,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
 RUN WALLET=$(npx --yes @permaweb/wallet) && \
     echo 'NODE_CONFIG_ENV="development"' > /release/cu/.env && \
     echo "WALLET=${WALLET}" >> /release/cu/.env && \
+    echo "HB_URL=http://localhost:8734" >> /release/cu/.env && \
+    echo "UNIT_MODE=hbu" >> /release/cu/.env && \
     echo "PORT=6363" >> /release/cu/.env
 
 # Copy CU service file to /release
