@@ -561,7 +561,7 @@ else
 	ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
 	scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
 	ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost \
-	"curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && \
+	"curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
 	sudo apt-get install -y nodejs && node -v && npm -v && \
 	sudo dpkg -i linux-*.deb && rm -rf linux-*.deb && \
 	sudo systemctl disable multipathd.service && sudo shutdown now"
