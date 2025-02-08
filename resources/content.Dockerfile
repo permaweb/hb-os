@@ -71,7 +71,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
 RUN WALLET=$(npx --yes @permaweb/wallet) && \
     echo 'NODE_CONFIG_ENV="development"' > /release/cu/.env && \
     echo "WALLET=${WALLET}" >> /release/cu/.env && \
-    echo "HB_URL=http://localhost:8734" >> /release/cu/.env && \
+    echo "HB_URL=http://localhost:10000" >> /release/cu/.env && \
     echo "UNIT_MODE=hbu" >> /release/cu/.env && \
     echo "PORT=6363" >> /release/cu/.env
 
