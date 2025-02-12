@@ -2,6 +2,10 @@
 import os
 
 config = {
+    # Branches for HyperBEAM and AO.
+    "hb_branch": "feat/ar1",
+    "ao_branch": "tillathehun0/cu-experimental",
+
     # Debugging and KVM.
     "debug": "0",
     "enable_kvm": "1",
@@ -53,6 +57,10 @@ class Directories:
 
 class Config:
     def __init__(self):
+        # Branches for HyperBEAM and AO.
+        self.hb_branch = config["hb_branch"]
+        self.ao_branch = config["ao_branch"]
+
         # Global flag from the config dictionary.
         self.debug = config["debug"]
         self.enable_kvm = config["enable_kvm"]

@@ -2,7 +2,7 @@ import os
 import subprocess
 import shutil
 
-def build_guest_content(out_dir, dockerfile):
+def build_guest_content(out_dir, dockerfile, hb_branch, ao_branch):
 
     docker_img="hb-content"
 
@@ -22,6 +22,16 @@ def build_guest_content(out_dir, dockerfile):
     # Save the current directory so we can return to it.
     old_dir = os.getcwd()
     os.chdir(context_dir)
+
+    # Replace <HB_BRANCH> with the branch name.
+    with open(dockerfile, "r") as f:
+        dockerfile_content = f.read()
+    dockerfile_content = dockerfile_content.replace("<HB_BRANCH>", hb_branch)
+    dockerfile_content = dockerfile_content.replace("<AO_BRANCH>", ao_branch)
+    with open(dockerfile, "w") as f:
+        f.write(dockerfile_content)
+
+    # Build the Docker image.
     try:
         # Note: In the command below the build context is ".", because we already cd'ed.
         if dockerfile_arg:
@@ -30,6 +40,14 @@ def build_guest_content(out_dir, dockerfile):
         subprocess.run(build_cmd, shell=True, check=True)
     finally:
         os.chdir(old_dir)
+
+    # Revert the <HB_BRANCH> to the original value.
+    with open(dockerfile, "r") as f:
+        dockerfile_content = f.read()
+    dockerfile_content = dockerfile_content.replace(hb_branch, "<HB_BRANCH>")
+    dockerfile_content = dockerfile_content.replace(ao_branch, "<AO_BRANCH>")
+    with open(dockerfile, "w") as f:
+        f.write(dockerfile_content)
 
     # Run Docker container.
     print(f"Running Docker container: {docker_img}")
