@@ -462,13 +462,9 @@ def main():
     )
     args = parser.parse_args()
     if args.target == "build_guest":
-        if not args.hb_branch:
-            parser("You can specify the HyperBEAM branch using the --hb-branch argument.")
-        else:
+        if args.hb_branch:
             config.hb_branch = args.hb_branch
-        if not args.ao_branch:
-            parser("You can specify the AO branch using the --ao-branch argument.")
-        else:
+        if args.ao_branch:
             config.ao_branch = args.ao_branch
 
     if args.target == "download_release":
