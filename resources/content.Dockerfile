@@ -39,13 +39,18 @@ RUN git clone https://github.com/erlang/rebar3.git && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain stable
 
+#Install Node.js (includes npm and npx)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
+    apt-get install -y nodejs && \
+    node -v && npm -v
+
 # Set up build directories
 RUN mkdir -p /build /release
 
 # Clone the HyperBEAM repository
 RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
     cd /build/HyperBEAM && \
-    git checkout feat/ar1
+    git checkout <HB_BRANCH>
 
 # Compile the application code using Rebar3
 RUN cd /build/HyperBEAM && \
@@ -59,13 +64,9 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     cd /build/ao && \
     git sparse-checkout init --cone && \
     git sparse-checkout set servers/cu && \
-    git checkout tillathehun0/cu-experimental && \
+    git checkout <AO_BRANCH> && \
     cp -r servers/cu /release/cu
 
-#Install Node.js (includes npm and npx)
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
-    apt-get install -y nodejs && \
-    node -v && npm -v
 
 # Generate a wallet using npx and update the .env file
 RUN WALLET=$(npx --yes @permaweb/wallet) && \
@@ -80,15 +81,6 @@ COPY cu.service /release
 
 # Copy the service file to /release
 COPY hyperbeam.service /release
-
-# # Run npm i to install the dependencies
-# RUN cd /release/cu && npm i
-
-# # Start the application with npm run start, wait 5 seconds, then stop it
-# RUN cd /release/cu && \
-#     npm run start & \
-#     sleep 5 && \
-#     pkill -f "npm run start"
 
 # Clean up build files
 RUN rm -rf /build

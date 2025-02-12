@@ -202,9 +202,12 @@ def build_content():
     """
     Build the guest content using the provided Dockerfile.
     """
-    out_dir = config.dir.content
-    dockerfile = config.content_dockerfile
-    build_guest_content(out_dir, dockerfile)
+    build_guest_content(
+        out_dir=config.dir.content, 
+        dockerfile=config.content_dockerfile, 
+        hb_branch=config.hb_branch,
+        ao_branch=config.ao_branch
+    )
 
 
 def setup_verity():
@@ -449,7 +452,24 @@ def main():
         "--url",
         help="URL to a tar.gz release file (required for download_release target)"
     )
+    parser.add_argument(
+        "--hb-branch",
+        help="HyperBEAM branch to use (optional for build_guest target)"
+    )
+    parser.add_argument(
+        "--ao-branch",
+        help="AO branch to use (optional for build_guest target)"
+    )
     args = parser.parse_args()
+    if args.target == "build_guest":
+        if not args.hb_branch:
+            parser("You can specify the HyperBEAM branch using the --hb-branch argument.")
+        else:
+            config.hb_branch = args.hb_branch
+        if not args.ao_branch:
+            parser("You can specify the AO branch using the --ao-branch argument.")
+        else:
+            config.ao_branch = args.ao_branch
 
     if args.target == "download_release":
         if not args.url:
