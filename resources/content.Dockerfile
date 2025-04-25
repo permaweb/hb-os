@@ -52,6 +52,9 @@ RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
     cd /build/HyperBEAM && \
     git checkout <HB_BRANCH>
 
+# Copy the config flat configurations to HyperBEAM Dir before building release.
+COPY ./config.flat /build/HyperBEAM/config.flat
+
 # Compile the application code using Rebar3
 RUN cd /build/HyperBEAM && \
     rebar3 release && \
@@ -66,7 +69,6 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     git sparse-checkout set servers/cu && \
     git checkout <AO_BRANCH> && \
     cp -r servers/cu /release/cu
-
 
 # Generate a wallet using npx and update the .env file
 RUN WALLET=$(npx --yes @permaweb/wallet) && \

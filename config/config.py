@@ -3,7 +3,7 @@ import os
 
 config = {
     # Branches for HyperBEAM and AO.
-    "hb_branch": "feat/ar1",
+    "hb_branch": "origin/main",
     "ao_branch": "tillathehun0/cu-experimental",
 
     # Debugging and KVM.
@@ -18,13 +18,13 @@ config = {
     "cmdline": "console=ttyS0 earlyprintk=serial root=/dev/sda",
     
     # QEMU Parameters.
-    "memory": "4096",
+    "memory": "204800",
     "hb_port": "80",
     "qemu_port": "4444",
     
     # Guest Definition.
     "host_cpu_family": "Milan",
-    "vcpu_count": 1,
+    "vcpu_count": 32,
     "guest_features": "0x1",
     "platform_info": "0x3",
     "guest_policy": "0x30000",

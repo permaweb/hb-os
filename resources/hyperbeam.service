@@ -4,8 +4,8 @@ Description=Permaweb Node
 [Service]
 User=root
 Type=simple
-Environment=HB_PRINT=http,debug,dev_snp
-ExecStart=/root/hb/bin/hb foreground -eval 'hb:start_simple_pay(<<"tYRUqrx6zuFFiix3MoSBYSPP3nMzi5EKf-lVYDEQz8A">>, 10000).'
+Environment=HB_PRINT=,
+ExecStart=/root/hb/bin/hb foreground
 Restart=on-failure
 
 [Install]

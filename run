@@ -239,31 +239,43 @@ def run_setup():
     run_command(cmd)
 
 
-def start_vm():
+def start_vm(data_disk=None):
     """
     Run the VM using QEMU with the guest image configuration.
     """
-    cmd = (
+    base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {config.verity_image} -hdb {config.verity_hash_tree} -load-config {config.vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
+    
+    if data_disk is not None:
+        cmd = f"{base_cmd} -data-disk {data_disk}"
+    else:
+        cmd = base_cmd
+        
     run_command(cmd)
 
-def start_release_vm():
+def start_release_vm(data_disk=None):
     """
     Start the VM in release mode, using files from the release folder.
     """
-    release_dir = os.path.join(os.getcwd(), "release") 
+    release_dir = os.path.join(os.getcwd(), "release")
     verity_image = os.path.join(release_dir, os.path.basename(config.verity_image))
     verity_hash_tree = os.path.join(release_dir, os.path.basename(config.verity_hash_tree))
     vm_config_file = os.path.join(release_dir, os.path.basename(config.vm_config_file))
 
-    cmd = (
+    base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {verity_image} -hdb {verity_hash_tree} -load-config {vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
+    
+    if data_disk is not None:
+        cmd = f"{base_cmd} -data-disk {data_disk}"
+    else:
+        cmd = base_cmd
+        
     run_command(cmd)
 
 def package_release():
@@ -366,12 +378,12 @@ def package_release():
     subprocess.run(tar_cmd, shell=True, check=True)
     print(f"Packaged release folder into {tar_path}")
     print("package_release() completed successfully.")
-    
+
 def download_release(url):
     """
     Download a tar.gz release from the provided URL and extract it into the release folder.
     """
-    release_dir = os.path.join(os.getcwd(), "release") 
+    release_dir = os.path.join(os.getcwd(), "release")
     # Remove the entire release directory if it exists.
     if os.path.exists(release_dir):
         shutil.rmtree(release_dir)
@@ -389,7 +401,7 @@ def download_release(url):
     with tarfile.open(tarball_path, "r:gz") as tar:
         tar.extractall(path=os.getcwd())
     os.remove(tarball_path)
-    
+
     digest_calc_path = os.path.join(config.dir.bin, "digest_calc")
     out_file = os.path.join(os.getcwd(), "inputs.json")
     vm_config_release = os.path.join(release_dir, os.path.basename(config.vm_config_file))
@@ -460,6 +472,10 @@ def main():
         "--ao-branch",
         help="AO branch to use (optional for build_guest target)"
     )
+    parser.add_argument(
+        "--data-disk",
+        help="Path to data disk image (optional for start and start_release targets)"
+    )
     args = parser.parse_args()
     if args.target == "build_guest":
         if args.hb_branch:
@@ -478,8 +494,8 @@ def main():
         "setup_host": setup_host,
         "build_base": build_base_image,
         "build_guest": build_guest_image,
-        "start": start_vm,
-        "start_release": start_release_vm,
+        "start": lambda: start_vm(args.data_disk),
+        "start_release": lambda: start_release_vm(args.data_disk),
         "package_release": package_release,
         "ssh": ssh_vm,
         "clean": clean,
