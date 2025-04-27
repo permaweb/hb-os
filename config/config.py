@@ -113,7 +113,7 @@ class Config:
         self.ssh_hosts_file = os.path.join(self.dir.build, "known_hosts")
 
         # QEMU configuration.
-        self.qemu_launch_script = "./launch.sh"
+        self.qemu_launch_script = "./launch.py"
         self.qemu_snp_params = "-sev-snp"
         self.qemu_memory = config["memory"]
         self.qemu_hb_port = config["hb_port"]

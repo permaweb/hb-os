@@ -502,13 +502,23 @@ fi
 
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
-    echo "Launching QEMU as a background service..."
-        if [ "$DEBUG" = "0" ]; then
-			bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-			echo "QEMU is running in the background."
-        else
-			echo "Launching QEMU in debug mode..."
-        	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        echo "Launching QEMU as a background service..."
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        echo "Waiting for SSH service to become available..."
+        max_attempts=60
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if nc -z localhost 2222 2>/dev/null; then
+                echo "SSH port is open!"
+                break
+            fi
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt/$max_attempts: SSH port not ready yet. Waiting..."
+            sleep 1
+        done
+        
+        if [ $attempt -eq $max_attempts ]; then
+            echo "Warning: Timed out waiting for SSH port to open. Continuing anyway..."
         fi
 
         if [ "$DEBUG" = "0" ]; then
@@ -567,14 +577,25 @@ if [ -n "$TOML_CONFIG" ]; then
 else
         echo "Launching VM normally..."
         echo "  $QEMU_CMDLINE"
-        if [ "$DEBUG" = "0" ]; then
-                echo "Launching QEMU as a background service..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-        else
-                echo "Launching QEMU in debug mode..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
+        echo "Launching QEMU as a background service..."
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        echo "Waiting for SSH service to become available..."
+        max_attempts=60
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if nc -z localhost 2222 2>/dev/null; then
+                echo "SSH port is open!"
+                break
+            fi
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt/$max_attempts: SSH port not ready yet. Waiting..."
+            sleep 1
+        done
+        
+        if [ $attempt -eq $max_attempts ]; then
+            echo "Warning: Timed out waiting for SSH port to open. Continuing anyway..."
         fi
-        sleep 50
+        
         ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
         ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost \

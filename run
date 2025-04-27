@@ -232,7 +232,7 @@ def run_setup():
     Run QEMU with the base image configuration.
     """
     cmd = (
-        f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_extra_params} "
+        f"sudo {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_extra_params} "
         f"-hda {config.vm_image_base_path} -hdb {config.vm_cloud_config} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
@@ -244,7 +244,7 @@ def start_vm(data_disk=None):
     Run the VM using QEMU with the guest image configuration.
     """
     base_cmd = (
-        f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
+        f"sudo {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {config.verity_image} -hdb {config.verity_hash_tree} -load-config {config.vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
@@ -266,7 +266,7 @@ def start_release_vm(data_disk=None):
     vm_config_file = os.path.join(release_dir, os.path.basename(config.vm_config_file))
 
     base_cmd = (
-        f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
+        f"sudo {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {verity_image} -hdb {verity_hash_tree} -load-config {vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
