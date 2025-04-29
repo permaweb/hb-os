@@ -70,13 +70,13 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     git checkout <AO_BRANCH> && \
     cp -r servers/cu /release/cu
 
-# Generate a wallet using npx and update the .env file
+# Copy the cu.env file to the release directory
+COPY cu.env /release/cu.env
+
+# Generate a wallet and inject it into the cu.env file
 RUN WALLET=$(npx --yes @permaweb/wallet) && \
-    echo 'NODE_CONFIG_ENV="development"' > /release/cu/.env && \
-    echo "WALLET=${WALLET}" >> /release/cu/.env && \
-    echo "HB_URL=http://localhost:10000" >> /release/cu/.env && \
-    echo "UNIT_MODE=hbu" >> /release/cu/.env && \
-    echo "PORT=6363" >> /release/cu/.env
+    cp /release/cu.env /release/cu/.env && \
+    echo "WALLET=${WALLET}" >> /release/cu/.env
 
 # Copy CU service file to /release
 COPY cu.service /release

@@ -126,7 +126,7 @@ def install_dependencies(force=False):
         run_command("sudo apt update")
         apt_install_cmd = (
             "sudo apt install -y git curl wget make whois pv genisoimage "
-            "qemu-utils pkg-config gcc libssl-dev cpio kmod fdisk rsync cryptsetup jq"
+            "qemu-utils pkg-config gcc libssl-dev cpio kmod fdisk rsync cryptsetup jq sshpass"
         )
         run_command(apt_install_cmd)
 
