@@ -84,7 +84,7 @@ def init():
     # Build digest calculator binary.
     run_command("cargo build --manifest-path=tools/digest_calc/Cargo.toml")
     run_command(f"cp ./tools/digest_calc/target/debug/digest_calc {config.dir.bin}")
-
+    setup_host()
 
 def create_vm():
     """

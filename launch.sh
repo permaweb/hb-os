@@ -529,13 +529,9 @@ fi
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
         echo "Launching QEMU as a background service..."
-        if [ "$DEBUG" = "0" ]; then
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-                echo "QEMU is running in the background."
-        else
-                echo "Launching QEMU in debug mode..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-        fi
+
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        echo "QEMU is running in the background."
 
         if [ "$DEBUG" = "0" ]; then
                 echo "Waiting for QEMU to start..."
@@ -594,16 +590,13 @@ else
         echo -n "Enter password for hb@localhost: "
         read -s HB_PASSWORD
         echo
-        
+
         echo "Launching VM normally..."
         echo "  $QEMU_CMDLINE"
-        if [ "$DEBUG" = "0" ]; then
-                echo "Launching QEMU as a background service..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-        else
-                echo "Launching QEMU in debug mode..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
-        fi
+
+        echo "Launching QEMU as a background service..."
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+
         sleep 5
         ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
 
@@ -615,11 +608,11 @@ else
 
         # Make base_setup.sh executable
         chmod +x resources/base_setup.sh
-        
+
         # Copy the .deb files and the setup script to the guest
         sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
         sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 resources/base_setup.sh hb@localhost:
-        
+
         # Run the setup script on the guest
         sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
 fi
