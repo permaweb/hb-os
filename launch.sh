@@ -13,7 +13,7 @@ DISCARD="none"
 USE_DEFAULT_NETWORK="1"
 CPU_MODEL="EPYC-v4"
 MONITOR_PATH=monitor
-QEMU_CONSOLE_LOG=`pwd`/stdout.log
+QEMU_CONSOLE_LOG=$(pwd)/stdout.log
 CERTS_PATH=
 
 # linked to cli flag
@@ -28,7 +28,6 @@ SEV_TOOLCHAIN_PATH="build/snp-release/usr/local"
 UEFI_PATH="$SEV_TOOLCHAIN_PATH/share/qemu/"
 UEFI_CODE=""
 UEFI_VARS=""
-
 
 JSON_FILE=./inputs.json
 
@@ -68,7 +67,7 @@ usage() {
 }
 
 add_opts() {
-        echo -n "$* " >> ${QEMU_CMDLINE}
+        echo -n "$* " >>${QEMU_CMDLINE}
 }
 
 exit_from_int() {
@@ -78,7 +77,7 @@ exit_from_int() {
         exit 1
 }
 
-run_cmd () {
+run_cmd() {
         $*
         if [ $? -ne 0 ]; then
                 echo "command $* failed"
@@ -119,104 +118,133 @@ parse_value_for_key() {
         PARSE_RESULT=$(grep -Po "^\s*$key\s*=\s*(?:\"\K[^\"]*(?=\")|\K[^\"\s]+)" "$file")
 }
 
-if [ `id -u` -ne 0 ]; then
+if [ $(id -u) -ne 0 ]; then
         echo "Must be run as root!"
         exit 1
 fi
 
 while [ -n "$1" ]; do
         case "$1" in
-		-sev-snp)	SEV_SNP="1"
-                                SEV_ES="1"
-                                SEV="1"
-                                ;;
-                -enable-discard)
-                                DISCARD="both"
-                                ;;
-		-sev-es)	SEV_ES="1"
-                                SEV="1"
-                                ;;
-		-sev)		SEV="1"
-                                ;;
-		-hda) 		HDA="$2"
-                                shift
-                                ;;
-		-hdb) 		HDB="$2"
-                                shift
-                                ;;
-		-mem)  		MEM="$2"
-                                shift
-                                ;;
-		-smp)		SMP="$2"
-                                shift
-                                ;;
-		-cpu)		CPU_MODEL="$2"
-                                shift
-                                ;;
-                -bios)          UEFI_CODE="$2"
-                                shift
-                                ;;
-                -allow-debug)   ALLOW_DEBUG="1"
-                                ;;
-		-kernel)	KERNEL_FILE=$2
-                                shift
-                                ;;
-		-initrd)	INITRD_FILE=$2
-                                shift
-                                ;;
-		-append)	APPEND=$2
-                                shift
-                                ;;
-		-cdrom)		CDROM_FILE="$2"
-                                shift
-                                ;;
-                -default-network)
-                                USE_DEFAULT_NETWORK="1"
-                                ;;
-                -monitor)       MONITOR_PATH="$2"
-                                shift
-                                ;;
-                -log)           QEMU_CONSOLE_LOG="$2"
-                                shift
-                                ;;
-                -certs) CERTS_PATH="$2"
-                                shift
-                                ;;
-                -id-block) ID_BLOCK_FILE="$2"
-                                shift
-                                ;;
-                -id-auth) ID_AUTH_FILE="$2"
-                        shift
-                        ;;
-                -host-data) HOST_DATA_FILE="$2"
-                        shift
-                        ;;
-                -policy) SEV_POLICY="$2"
-                        shift
-                        ;;
-                -vm-config-file) VM_CONFIG_FILE="$2"
-                        shift
-                        ;;
-                -load-config) TOML_CONFIG="$2"
-                        shift
-                        ;;
-                -hb-port) HB_PORT="$2"
-                        shift
-                        ;;
-                -qemu-port) QEMU_PORT="$2"
-                        shift
-                        ;;
-                -enable-kvm) ENABLE_KVM="$2"
-                        shift
-                        ;;
-                -debug) DEBUG="$2"
-                        shift
-                        ;;
-                -data-disk) DATA_DISK="$2"
-                        shift
-                        ;;
-                *)		usage
-                                ;;
+        -sev-snp)
+                SEV_SNP="1"
+                SEV_ES="1"
+                SEV="1"
+                ;;
+        -enable-discard)
+                DISCARD="both"
+                ;;
+        -sev-es)
+                SEV_ES="1"
+                SEV="1"
+                ;;
+        -sev)
+                SEV="1"
+                ;;
+        -hda)
+                HDA="$2"
+                shift
+                ;;
+        -hdb)
+                HDB="$2"
+                shift
+                ;;
+        -mem)
+                MEM="$2"
+                shift
+                ;;
+        -smp)
+                SMP="$2"
+                shift
+                ;;
+        -cpu)
+                CPU_MODEL="$2"
+                shift
+                ;;
+        -bios)
+                UEFI_CODE="$2"
+                shift
+                ;;
+        -allow-debug)
+                ALLOW_DEBUG="1"
+                ;;
+        -kernel)
+                KERNEL_FILE=$2
+                shift
+                ;;
+        -initrd)
+                INITRD_FILE=$2
+                shift
+                ;;
+        -append)
+                APPEND=$2
+                shift
+                ;;
+        -cdrom)
+                CDROM_FILE="$2"
+                shift
+                ;;
+        -default-network)
+                USE_DEFAULT_NETWORK="1"
+                ;;
+        -monitor)
+                MONITOR_PATH="$2"
+                shift
+                ;;
+        -log)
+                QEMU_CONSOLE_LOG="$2"
+                shift
+                ;;
+        -certs)
+                CERTS_PATH="$2"
+                shift
+                ;;
+        -id-block)
+                ID_BLOCK_FILE="$2"
+                shift
+                ;;
+        -id-auth)
+                ID_AUTH_FILE="$2"
+                shift
+                ;;
+        -host-data)
+                HOST_DATA_FILE="$2"
+                shift
+                ;;
+        -policy)
+                SEV_POLICY="$2"
+                shift
+                ;;
+        -vm-config-file)
+                VM_CONFIG_FILE="$2"
+                shift
+                ;;
+        -load-config)
+                TOML_CONFIG="$2"
+                shift
+                ;;
+        -hb-port)
+                HB_PORT="$2"
+                shift
+                ;;
+        -qemu-port)
+                QEMU_PORT="$2"
+                shift
+                ;;
+        -enable-kvm)
+                ENABLE_KVM="$2"
+                shift
+                ;;
+        -debug)
+                DEBUG="$2"
+                shift
+                ;;
+        -data-disk)
+                DATA_DISK="$2"
+                shift
+                ;;
+        *)
+                usage
+                ;;
         esac
 
         shift
@@ -230,28 +258,28 @@ if [ -f "$TOML_CONFIG" ]; then
         fi
 
         if [ -z "$UEFI_CODE" ]; then
-          parse_value_for_key "ovmf_file" "$TOML_CONFIG"
-          UEFI_CODE="$PARSE_RESULT"
+                parse_value_for_key "ovmf_file" "$TOML_CONFIG"
+                UEFI_CODE="$PARSE_RESULT"
         fi
 
         if [ -z "$KERNEL_FILE" ]; then
                 parse_value_for_key "kernel_file" "$TOML_CONFIG"
-          KERNEL_FILE="$PARSE_RESULT"
+                KERNEL_FILE="$PARSE_RESULT"
         fi
 
         if [ -z "$INITRD_FILE" ]; then
                 parse_value_for_key "initrd_file" "$TOML_CONFIG"
-          INITRD_FILE="$PARSE_RESULT"
+                INITRD_FILE="$PARSE_RESULT"
         fi
 
         if [ -z "$APPEND" ]; then
                 parse_value_for_key "kernel_cmdline" "$TOML_CONFIG"
-          APPEND="$PARSE_RESULT"
+                APPEND="$PARSE_RESULT"
         fi
 
         if [ -z "$SEV_POLICY" ]; then
                 parse_value_for_key "guest_policy" "$TOML_CONFIG"
-          SEV_POLICY="$PARSE_RESULT"
+                SEV_POLICY="$PARSE_RESULT"
         fi
 
 fi
@@ -268,11 +296,10 @@ if [[ -n "$ID_BLOCK_FILE" && -n "$ID_AUTH_FILE" ]]; then
         #This variable indicates that both id and auth block are present, so that
         #we dont have to do this length check again later on
         USE_ID_AND_AUTH=1
-elif  [[ -n "$ID_BLOCK_FILE" || -n "$ID_AUTH_FILE" ]]; then
+elif [[ -n "$ID_BLOCK_FILE" || -n "$ID_AUTH_FILE" ]]; then
         echo "-id-block and -auth-block must either both bet set or both unset"
         exit 1
 fi
-
 
 [ -n "$HDA" ] && {
         TMP="$HDA"
@@ -295,7 +322,6 @@ fi
 
         [ -z "$GUEST_NAME" ] && GUEST_NAME="$(basename $TMP | sed -re 's|\.[^\.]+$||')"
 }
-
 
 if [ -z "$UEFI_CODE" ]; then
         TMP="$UEFI_PATH/OVMF_CODE.fd"
@@ -320,7 +346,7 @@ fi
 
 if [ "$ALLOW_DEBUG" = "1" ]; then
         # This will dump all the VMCB on VM exit
-        echo 1 > /sys/module/kvm_amd/parameters/dump_all_vmcbs
+        echo 1 >/sys/module/kvm_amd/parameters/dump_all_vmcbs
 
         # Enable some KVM tracing to the debug
         #echo kvm: >/sys/kernel/debug/tracing/set_event
@@ -359,14 +385,14 @@ add_opts "-no-reboot"
 # "normal" qemu drive on the host side, and it is exposed to the guest as a
 # persistent flash device.
 if [ "${SEV_SNP}" = 1 ]; then
-                add_opts "-bios ${UEFI_CODE}"
+        add_opts "-bios ${UEFI_CODE}"
         if [ -n "$UEFI_VARS" ]; then
-        add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_VARS}"
+                add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_VARS}"
         fi
 else
-    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
+        add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
         if [ -n "$UEFI_VARS" ]; then
-        add_opts "-drive if=pflash,format=raw,unit=1,file=${UEFI_VARS}"
+                add_opts "-drive if=pflash,format=raw,unit=1,file=${UEFI_VARS}"
         fi
 fi
 
@@ -377,14 +403,14 @@ fi
 # distros like Ubuntu 20.04 still only provide 4.1, so only enable
 # usermode network if specifically requested.
 if [ "$USE_DEFAULT_NETWORK" = "1" ]; then
-    #echo "guest port 22 is fwd to host 8000..."
-#    add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
-                add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:8734-:8734,hostfwd=tcp:0.0.0.0:${HB_PORT}-:10000"
-#    add_opts "-netdev user,id=vmnic"
-    add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
+        #echo "guest port 22 is fwd to host 8000..."
+        #    add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
+        add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:8734-:8734,hostfwd=tcp:0.0.0.0:${HB_PORT}-:10000"
+        #    add_opts "-netdev user,id=vmnic"
+        add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
 fi
 
-DISKS=( "$HDA" "$HDB" )
+DISKS=("$HDA" "$HDB")
 for ((i = 0; i < ${#DISKS[@]}; i++)); do
         DISK="${DISKS[i]}"
         #DISK might be "" if the clif flag was not set
@@ -396,7 +422,7 @@ for ((i = 0; i < ${#DISKS[@]}; i++)); do
                                 add_opts "-drive file=${DISK},if=none,id=disk${i},format=raw"
                         fi
                         add_opts "-device virtio-scsi-pci,id=scsi${i},disable-legacy=on,iommu_platform=true"
-                        add_opts "-device scsi-hd,drive=disk${i},bootindex=$((i+1))"
+                        add_opts "-device scsi-hd,drive=disk${i},bootindex=$((i + 1))"
                 else
                         if [[ ${DISK} = *"qcow2" ]]; then
                                 add_opts "-drive file=${DISK},format=qcow2"
@@ -489,27 +515,23 @@ stty intr ^]
 
 # Process the DATA_DISK if set (new disk for external data storage)
 if [ -n "$DATA_DISK" ]; then
-    TMP="$DATA_DISK"
-    DATA_DISK="$(readlink -e $TMP)"
-    if [ -z "$DATA_DISK" ]; then
-        echo "Can't locate data volume file [$TMP]"
-        usage
-    fi
-    add_opts "-drive file=${DATA_DISK},if=none,id=dataDisk,format=qcow2"
-    add_opts "-device virtio-scsi-pci,id=scsi_data,disable-legacy=on,iommu_platform=true"
-    add_opts "-device scsi-hd,drive=dataDisk"
+        TMP="$DATA_DISK"
+        DATA_DISK="$(readlink -e $TMP)"
+        if [ -z "$DATA_DISK" ]; then
+                echo "Can't locate data volume file [$TMP]"
+                usage
+        fi
+        add_opts "-drive file=${DATA_DISK},if=none,id=dataDisk,format=qcow2"
+        add_opts "-device virtio-scsi-pci,id=scsi_data,disable-legacy=on,iommu_platform=true"
+        add_opts "-device scsi-hd,drive=dataDisk"
 fi
 
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
-    echo "Launching QEMU as a background service..."
-        if [ "$DEBUG" = "0" ]; then
-			bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-			echo "QEMU is running in the background."
-        else
-			echo "Launching QEMU in debug mode..."
-        	bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-        fi
+        echo "Launching QEMU as a background service..."
+
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        echo "QEMU is running in the background."
 
         if [ "$DEBUG" = "0" ]; then
                 echo "Waiting for QEMU to start..."
@@ -565,23 +587,34 @@ if [ -n "$TOML_CONFIG" ]; then
         fi
 
 else
+        echo -n "Enter password for hb@localhost: "
+        read -s HB_PASSWORD
+        echo
+
         echo "Launching VM normally..."
         echo "  $QEMU_CMDLINE"
-        if [ "$DEBUG" = "0" ]; then
-                echo "Launching QEMU as a background service..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
-        else
-                echo "Launching QEMU in debug mode..."
-                bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG}
-        fi
-        sleep 50
+
+        echo "Launching QEMU as a background service..."
+        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+
+        sleep 5
         ssh-keygen -f ~/.ssh/known_hosts -R "[localhost]:2222"
-        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
-        ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost \
-        "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
-        sudo apt-get install -y nodejs && node -v && npm -v && \
-        sudo dpkg -i linux-*.deb && rm -rf linux-*.deb && \
-        sudo systemctl disable multipathd.service && sudo shutdown now"
+
+        # Ask for password once and use sshpass
+        if ! command -v sshpass &>/dev/null; then
+                echo "Installing sshpass..."
+                sudo apt-get update && sudo apt-get install -y sshpass
+        fi
+
+        # Make base_setup.sh executable
+        chmod +x resources/base_setup.sh
+
+        # Copy the .deb files and the setup script to the guest
+        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
+        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 resources/base_setup.sh hb@localhost:
+
+        # Run the setup script on the guest
+        sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
 fi
 
 # restore the mapping
