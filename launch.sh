@@ -62,7 +62,10 @@ usage() {
         echo " -hb-port                   Port for HyperBeam (default: 8734)"
         echo " -qemu-port                 Port for QEMU monitor (default: 4444)"
         echo " -debug                     Enable debug mode"
+        echo " -vm-type                   Type of VM to launch (default: compute)"
         echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
+        echo " -peer-location ADDR      Location of the peer VM (required for compute VM type)"
+        echo " -self-location ADDR        Location of the self VM (required for compute VM type)"
         exit 1
 }
 
@@ -240,6 +243,18 @@ while [ -n "$1" ]; do
                 ;;
         -data-disk)
                 DATA_DISK="$2"
+                shift
+                ;;
+        -vm-type)
+                VM_TYPE="$2"
+                shift
+                ;;
+        -peer-location)
+                PEER_LOCATION="$2"
+                shift
+                ;;
+        -self-location)
+                SELF_LOCATION="$2"
                 shift
                 ;;
         *)
@@ -561,12 +576,13 @@ if [ -n "$TOML_CONFIG" ]; then
                         rm -rf ${QEMU_CMDLINE}
                         exit 1
                 fi
-
+                
+                # Execute the post_start script with the existing JSON file
+                python3 ./scripts/post_start.py "$JSON_FILE" "$VM_TYPE" "$PEER_LOCATION" "$SELF_LOCATION"
+      
+                
                 # Wrap the JSON file content with snp_hashes using jq
                 WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
-
-                # Send the POST request with the wrapped JSON
-                curl -X POST -H "Content-Type: application/json" -d "$WRAPPED_JSON" http://localhost:${HB_PORT}/~snp@1.0/init
 
                 # At the very end, print the desired JSON fields (excluding expected_hash)
                 # if JSON_FILE file exists
@@ -606,12 +622,9 @@ else
                 sudo apt-get update && sudo apt-get install -y sshpass
         fi
 
-        # Make base_setup.sh executable
-        chmod +x resources/base_setup.sh
-
         # Copy the .deb files and the setup script to the guest
         sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
-        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 resources/base_setup.sh hb@localhost:
+        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
         # Run the setup script on the guest
         sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"

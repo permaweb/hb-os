@@ -37,6 +37,7 @@ config = {
         "microcode": 213,
         "_reserved": [0, 0, 0, 0],
     }
+    
 }
 
 
@@ -52,6 +53,7 @@ class Directories:
         self.verity = os.path.join(self.build, "verity")
         self.snp = os.path.join(self.build, "snp-release")
         self.resources = os.path.realpath("resources")
+        self.scripts = os.path.realpath("scripts")
         self.config = os.path.realpath("config")
 
 
@@ -82,7 +84,7 @@ class Config:
 
         # Initramfs configuration.
         self.initrd = os.path.join(self.dir.build, "initramfs.cpio.gz")
-        self.initramfs_script = os.path.join(self.dir.resources, "init.sh")
+        self.initramfs_script = os.path.join(self.dir.scripts, "init.sh")
         self.initramfs_dockerfile = os.path.join(self.dir.resources, "initramfs.Dockerfile")
 
         # Content configuration.
