@@ -62,10 +62,9 @@ usage() {
         echo " -hb-port                   Port for HyperBeam (default: 8734)"
         echo " -qemu-port                 Port for QEMU monitor (default: 4444)"
         echo " -debug                     Enable debug mode"
-        echo " -vm-type                   Type of VM to launch (default: compute)"
         echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
-        echo " -peer-location ADDR      Location of the peer VM (required for compute VM type)"
-        echo " -self-location ADDR        Location of the self VM (required for compute VM type)"
+        echo " -peer URL      URL of the peer VM (required for compute VM type)"
+        echo " -self URL        URL of the self VM (required for compute VM type)"
         exit 1
 }
 
@@ -245,16 +244,12 @@ while [ -n "$1" ]; do
                 DATA_DISK="$2"
                 shift
                 ;;
-        -vm-type)
-                VM_TYPE="$2"
+        -peer)
+                PEER="$2"
                 shift
                 ;;
-        -peer-location)
-                PEER_LOCATION="$2"
-                shift
-                ;;
-        -self-location)
-                SELF_LOCATION="$2"
+        -self)
+                SELF="$2"
                 shift
                 ;;
         *)
@@ -577,10 +572,18 @@ if [ -n "$TOML_CONFIG" ]; then
                         exit 1
                 fi
                 
-                # Execute the post_start script with the existing JSON file
-                python3 ./scripts/post_start.py "$JSON_FILE" "$VM_TYPE" "$PEER_LOCATION" "$SELF_LOCATION"
-      
-                
+                # Check if required parameters are set before calling post_start.py
+                if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
+                    echo "Running post-start script with JSON_FILE=$JSON_FILE, SELF=$SELF, PEER=$PEER"
+                    python3 ./scripts/post_start.py --json_file "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
+                else
+                    echo "Error: Missing required parameters for post-start script."
+                    echo "JSON_FILE=${JSON_FILE:-'not set'}"
+                    echo "SELF=${SELF:-'not set'}"
+                    echo "PEER=${PEER:-'not set'}"
+                    echo "Skipping post-start script execution."
+                fi
+
                 # Wrap the JSON file content with snp_hashes using jq
                 WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
 

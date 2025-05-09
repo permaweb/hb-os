@@ -18,14 +18,5 @@
     // The price per request to this node
     "router_price": 250,
     // The template is used to match paths this node will accept.
-    "router_template": "/.*~process@1.0/.*",
-
-    // ─── Green Zone Peer Join Configuration ──────────────────────────────────
-    // Settings for this TEE to join an existing green zone
-    // The location of the peer this node will join.
-    "green_zone_peer_location": "$PEER",         // Automatically Injected
-    // The ID/Address of the peer this node will join.
-    "green_zone_peer_id": "$PEER_ID",               // Automatically Injected
-    // Whether to adopt the green zone configuration from the peer
-    "green_zone_adopt_config": true
+    "router_template": "/.*~process@1.0/.*"
 }

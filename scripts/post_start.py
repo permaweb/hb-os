@@ -12,6 +12,7 @@ import time
 import requests
 import json
 import re
+import argparse
 
 # Ensure the script directory is in the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,11 +20,12 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 # Define configuration directory path
-CONFIG_DIR = os.path.join(script_dir, '..', 'config', 'servers')
+CONFIG_DIR = os.path.join(script_dir, '..', 'config')
 
 from node_api import (
     get_node_info, get_node_process_routes, register_node, meta_post,
-    print_error, print_success, print_warning, print_info, print_step, print_command
+    initialize_greenzone, join_node, become_node,
+    print_error, print_success, print_warning, print_info, print_step, print_command, print_debug, Colors
 )
 
 def run_command(cmd):
@@ -41,6 +43,7 @@ def load_json_data(file_path):
     """
     Load JSON data from a file.
     """
+    print_step(f"Loading JSON data from {file_path}")
     try:
         with open(file_path, 'r') as file:
             data = json.load(file)
@@ -59,6 +62,9 @@ def load_jsonc_file(file_path):
     Returns:
         Parsed JSON data as dict or None if there was an error
     """
+    # Get just the filename for cleaner output
+    filename = os.path.basename(file_path)
+    print_step(f"Loading JSONC file from {filename}")
     try:
         with open(file_path, 'r') as file:
             content = file.read()
@@ -152,15 +158,16 @@ def replace_placeholders(config, node_info=None, peer_info=None):
     Returns:
         dict: Updated configuration with placeholders replaced
     """
+    print_step(f"Replacing placeholder variables in configuration")
     # Skip if either config is not a dict or missing node_info
     if not isinstance(config, dict) or not node_info:
         return config
         
     # Define replacement mappings
-    replacements = {
-        "$SELF": node_info.get('location', ''),
-        "$ID": node_info.get('id', '')
-    }
+    replacements = {}
+    if node_info:
+        replacements["$SELF"] = node_info.get('location', '')
+        replacements["$SELF_ID"] = node_info.get('id', '')
     
     # Add router replacements if available
     if peer_info:
@@ -170,7 +177,7 @@ def replace_placeholders(config, node_info=None, peer_info=None):
     # Print available replacements for debugging
     print_info("Available placeholder replacements:")
     for key, value in replacements.items():
-        print_info(f"  {key} -> {value}")
+        print_info(f"{Colors.RED}{key}{Colors.RESET} -> {Colors.YELLOW}{value}{Colors.RESET}")
     
     # Track which replacements were actually used
     used_replacements = set()
@@ -204,7 +211,7 @@ def replace_placeholders(config, node_info=None, peer_info=None):
     if used_replacements:
         print_success(f"Applied {len(used_replacements)} placeholder replacements: {', '.join(used_replacements)}")
     else:
-        print_warning("No placeholders were found in the configuration")
+        print_debug("No placeholders were found in the configuration")
     
     return processed_config
 
@@ -242,105 +249,98 @@ def load_and_update_config(config_path, json_data, node_info=None, peer_info=Non
         print_success(f"Replaced placeholder variables in configuration")
     
     # Print the updated config for debugging
-    print_info("Final configuration:")
-    print(json.dumps(config, indent=4))
+    print_debug(f"Final configuration: {json.dumps(config, indent=4)}")
     return config
-
-def post_start(json_data, peer_info, node_info, config_path):
-    """
-    Post-start actions.
-    
-    Args:
-        json_data: JSON data containing VM configuration
-        peer_location: Location of the peer VM
-        location: Location of the node VM
-    """
-    print_info(f"Peer info:\n{json.dumps(peer_info, indent=4)}")
-    print_info(f"Node info:\n{json.dumps(node_info, indent=4)}")
-    
-    try:
-        # Load and update configuration
-        print_step("Loading and updating  configuration")
-        config = load_and_update_config(
-            config_path, 
-            json_data, 
-            node_info=node_info,
-            peer_info=peer_info,
-        )
         
-        if config:
-            # Post updated configuration to compute node
-            print_step("Posting compute configuration")
-            meta_post(node_info['location'], config, 'json@1.0')
-            print_success("Compute configuration posted successfully")
-            
-            # Register compute node with peer
-            print_step("Registering compute node with peer")
-            register_node(node_info['location'])
-            print_success("Compute node registered with peer")
-        else:
-            print_error("Failed to load or update compute configuration")
-            sys.exit(1)
-    except Exception as e:
-        print_error(f"Error in compute node setup: {e}")
-        sys.exit(1)
+def format_url(url):
+    """
+    Format a URL if it doesn't already start with http:// or https://
+    """
+    if not url.startswith(('http://', 'https://')):
+        return f"http://{url}"
+    return url
 
 def main():
     """
     Main entry point for post-start script.
     """
-    if len(sys.argv) < 5:
-        print_error("Not enough arguments")
-        print("Usage: python3 post_start.py JSON_FILE VM_TYPE PEER_LOCATION SELF_LOCATION")
-        sys.exit(1)
-
-    json_file = sys.argv[1]
-    vm_type = sys.argv[2].lower()
-    peer_location = sys.argv[3]
-    self_location = sys.argv[4]
+    print_step(f"Post-start script running")
     
-    # Get node information for peer
-    print_step("Getting peer node information")
-    if not peer_location.startswith(('http://', 'https://')):
-        peer_location = f"http://{peer_location}"
-        
-    # Get node information for self
-    print_step("Getting node information")
-    if not self_location.startswith(('http://', 'https://')):
-        self_location = f"http://{self_location}"
-        
-    peer_info = get_node_info(peer_location)
-    print_info(f"Peer info:\n{json.dumps(peer_info, indent=4)}")
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Post-start script for VM initialization')
+    parser.add_argument('--inputs', required=True, help='Path to the JSON file containing VM configuration')
+    parser.add_argument('--self', required=True, help='URL of the current VM')
+    parser.add_argument('--peer', help='URL of the peer VM (if any)')
     
-    node_info = get_node_info(self_location)
-    print_info(f"Node info:\n{json.dumps(node_info, indent=4)}")
+    # Default values
+    node_info = None
+    peer_info = None
+    json_data = None
+    
+    # Parse arguments
+    args = parser.parse_args()
     
     # Load JSON data from file
-    print_step(f"Loading VM configuration from {json_file}")
-    json_data = load_json_data(json_file)
-    if not json_data:
-        print_error(f"Failed to load JSON data from {json_file}")
-        sys.exit(1)
-    else:
-        print_info(f"Loaded JSON data from {json_file}")
-    
-    print_step(f"Post-start script running for VM type: {vm_type}")
-    config_path = None
-    
-    if vm_type == "compute":
-        config_path = os.path.join(CONFIG_DIR, 'compute.jsonc')
-    elif vm_type == "router":
-        config_path = os.path.join(CONFIG_DIR, 'router.jsonc')
-    else:
-        config_path = os.path.join(CONFIG_DIR, 'standalone.jsonc')
+    if args.inputs:
+        json_data = load_json_data(args.inputs)
 
-    if config_path:
-        post_start(json_data, peer_info, node_info, config_path)
-    else:
-        print_error(f"Unknown VM type: {vm_type}")
-        print("Supported types: standalone, compute, router")
-        sys.exit(1)
-    
+    # Get node information for self
+    if args.self:
+        node_url = args.self
+        node_url = format_url(node_url)
+        node_info = get_node_info(node_url)
+        
+    # Get peer information if provided
+    if args.peer:
+        peer_url = args.peer
+        peer_url = format_url(peer_url)
+        peer_info = get_node_info(peer_url)
+
+    # Load Server Config
+    config_path = os.path.join(CONFIG_DIR, 'server.jsonc')
+    config = load_and_update_config(
+        config_path=config_path, 
+        json_data=json_data, 
+        node_info=node_info,
+        peer_info=peer_info,
+    )
+
+    # If config is loaded successfully send requests to node
+    if config:
+        is_greenzone_host = False
+        # Check if greenzone required config exists and set is_greenzone_host to True if so
+        # If greenzone required config is empty, remove it from configuration
+        if config and 'green_zone_required_config' in config:
+            if config['green_zone_required_config'] == {}:
+                print_warning("Greenzone required config is empty, removing it from configuration")
+                print_info(f"Its removed so the node will use the default greenzone required config")
+                del config['green_zone_required_config']
+            is_greenzone_host = True
+
+        # Post updated configuration to compute node
+        meta_post(node_info['location'], config, 'json@1.0')
+        # Register compute node with peer if router_peer_location is configured
+        if config and 'router_peer_location' in config:
+            print_info(f"Router peer location found in config, registering node")
+            register_node(node_info['location'])
+        else:
+            print_debug(f"No router_peer_location in config, skipping node registration")
+        
+        # Join and become a node in a Greenzone if green_zone_peer_location is configured
+        if config and 'green_zone_peer_location' in config:
+            print_info(f"Greenzone peer location found in config, joining greenzone")
+            join_node(node_info['location'], config['green_zone_peer_location'], config['green_zone_peer_id'], config['green_zone_adopt_config'])
+            become_node(node_info['location'], config['green_zone_peer_location'], config['green_zone_peer_id'])
+        else:
+            print_debug(f"No green_zone_peer_location in config, skipping connection to greenzone")
+        
+        # Initialize Greenzone if green_zone_required_config is configured
+        if is_greenzone_host == True:
+            print_info(f"Greenzone required config found in config, initializing greenzone")
+            initialize_greenzone(node_info['location'])
+        else:
+            print_debug(f"No green_zone_required_config in config, skipping greenzone initialization")
+        
     print_success("Post-start script completed successfully")
 
 if __name__ == "__main__":

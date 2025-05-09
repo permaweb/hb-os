@@ -239,15 +239,14 @@ def run_setup():
     run_command(cmd)
 
 
-def start_vm(data_disk=None, vm_type=None, peer_location=None, self_location=None):
+def start_vm(data_disk=None, self=None, peer=None):
     """
     Run the VM using QEMU with the guest image configuration.
     
     Args:
         data_disk: Optional path to a data disk image
-        vm_type: Type of VM, either "standalone", "compute", or "router"
-        peer_location: Location of the peer VM
-        self_location: Location of this VM
+        self: URL of this VM
+        peer: URL of the peer VM
     """
     base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
@@ -255,19 +254,11 @@ def start_vm(data_disk=None, vm_type=None, peer_location=None, self_location=Non
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
     
-    # Add additional parameters based on vm_type
-    if vm_type.lower() == "router":
-        base_cmd += f" -vm-type router"
-    elif vm_type.lower() == "compute":
-        base_cmd += f" -vm-type compute"
-    else:  # standalone
-        base_cmd += f" -vm-type standalone"
-    
     # Add peer and self locations
-    if peer_location:
-        base_cmd += f" -peer-location {peer_location}"
-    if self_location:
-        base_cmd += f" -self-location {self_location}"
+    if peer:
+        base_cmd += f" -peer {peer}"
+    if self:
+        base_cmd += f" -self {self}"
     
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
@@ -276,15 +267,14 @@ def start_vm(data_disk=None, vm_type=None, peer_location=None, self_location=Non
         
     run_command(cmd)
 
-def start_release_vm(data_disk=None, vm_type=None, peer_location=None, self_location=None):
+def start_release_vm(data_disk=None, self=None, peer=None):
     """
     Start the VM in release mode, using files from the release folder.
     
     Args:
         data_disk: Optional path to a data disk image
-        vm_type: Type of VM, either "standalone", "compute", or "router"
-        peer_location: Location of the peer VM
-        self_location: Location of this VM
+        self: URL of this VM
+        peer: URL of the peer VM
     """
     release_dir = os.path.join(os.getcwd(), "release")
     verity_image = os.path.join(release_dir, os.path.basename(config.verity_image))
@@ -297,19 +287,11 @@ def start_release_vm(data_disk=None, vm_type=None, peer_location=None, self_loca
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
     
-    # Add additional parameters based on vm_type
-    if vm_type.lower() == "router":
-        base_cmd += f" -vm-type router"
-    elif vm_type.lower() == "compute":
-        base_cmd += f" -vm-type compute"
-    else:  # standalone
-        base_cmd += f" -vm-type standalone"
-    
     # Add peer and self locations
-    if peer_location:
-        base_cmd += f" -peer-location {peer_location}"
-    if self_location:
-        base_cmd += f" -self-location {self_location}"
+    if peer:
+        base_cmd += f" -peer {peer}"
+    if self:
+        base_cmd += f" -self {self}"
     
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
@@ -499,16 +481,14 @@ COMMANDS:
   start               Start the VM using QEMU with the guest image configuration
     Options:
       --data-disk PATH       Path to data disk image
-      --type TYPE            Type of VM to start (standalone, compute, or router)
-      --peer-location LOC    Location of the peer VM
-      --self-location LOC    Location of this VM
+      --self URL             URL of this VM
+      --peer URL             URL of the peer VM
   
   start_release       Start the VM in release mode using files from the release folder
     Options:
       --data-disk PATH       Path to data disk image
-      --type TYPE            Type of VM to start (standalone, compute, or router)
-      --peer-location LOC    Location of the peer VM
-      --self-location LOC    Location of this VM
+      --self URL             URL of this VM
+      --peer URL             URL of the peer VM
   
   package_release     Package all files needed for starting the VM into a release folder
   
@@ -600,22 +580,16 @@ def main():
         help="Path to data disk image"
     )
     start_release_parser.add_argument(
-        "--type",
-        choices=["standalone", "compute", "router"],
-        required=True,
-        help="Type of VM to start (standalone, compute, or router)"
-    )
-    start_release_parser.add_argument(
-        "--peer-location",
-        required=True,
-        help="Location of the peer VM"
-    )
-    start_release_parser.add_argument(
-        "--self-location",
+        "--self",
         required=True,
         help="Location of this VM"
     )
-    
+    start_release_parser.add_argument(
+        "--peer",
+        required=True,
+        help="Location of the peer VM"
+    )
+
     # Package release command
     package_release_parser = subparsers.add_parser("package_release", help="Package files for release")
     
@@ -667,9 +641,9 @@ def main():
     elif args.target == "build_guest":
         build_guest_image()
     elif args.target == "start":
-        start_vm(args.data_disk, args.type, args.peer_location, args.self_location)
+        start_vm(args.data_disk, args.self, args.peer)
     elif args.target == "start_release":
-        start_release_vm(args.data_disk, args.type, args.peer_location, args.self_location)
+        start_release_vm(args.data_disk, args.self, args.peer)
     elif args.target == "package_release":
         package_release()
     elif args.target == "ssh":

@@ -41,11 +41,5 @@
                 "path": "verify"
             }
         }
-    },
-    // ─── Green Zone Host Configuration (Accepting Peers) ───────────────────────
-    // Required settings for a TEE to host other nodes in its green zone
-    "green_zone_required_config": {
-        "initialized": "permanent",
-        "scheduling_mode": "disabled"
     }
 }
