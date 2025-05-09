@@ -557,18 +557,12 @@ def main():
         help="Path to data disk image"
     )
     start_parser.add_argument(
-        "--type",
-        choices=["standalone", "compute", "router"],
-        required=True,
-        help="Type of VM to start (standalone, compute, or router)"
-    )
-    start_parser.add_argument(
-        "--peer-location",
+        "--peer",
         required=True,
         help="Location of the peer VM"
     )
     start_parser.add_argument(
-        "--self-location",
+        "--self",
         required=True,
         help="Location of this VM"
     )
