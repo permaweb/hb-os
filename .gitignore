@@ -1,5 +1,7 @@
 build
 release
+release.tar.gz
+inputs.json
 
 *__pycache__
 

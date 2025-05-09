@@ -153,7 +153,7 @@ def install_dependencies(force=False):
         if shutil.which("cargo") is None or force:
             info("Getting Rust toolchain. We recommend choosing the default install option.")
             time.sleep(5)
-            run_command("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh")
+            run_command("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable")
             # Update the current process's PATH to include Cargo's bin directory
             cargo_bin = os.path.expanduser("~/.cargo/bin")
             os.environ["PATH"] += os.pathsep + cargo_bin

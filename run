@@ -239,15 +239,26 @@ def run_setup():
     run_command(cmd)
 
 
-def start_vm(data_disk=None):
+def start_vm(data_disk=None, self=None, peer=None):
     """
     Run the VM using QEMU with the guest image configuration.
+    
+    Args:
+        data_disk: Optional path to a data disk image
+        self: URL of this VM
+        peer: URL of the peer VM
     """
     base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {config.verity_image} -hdb {config.verity_hash_tree} -load-config {config.vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
+    
+    # Add peer and self locations
+    if peer:
+        base_cmd += f" -peer {peer}"
+    if self:
+        base_cmd += f" -self {self}"
     
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
@@ -256,9 +267,14 @@ def start_vm(data_disk=None):
         
     run_command(cmd)
 
-def start_release_vm(data_disk=None):
+def start_release_vm(data_disk=None, self=None, peer=None):
     """
     Start the VM in release mode, using files from the release folder.
+    
+    Args:
+        data_disk: Optional path to a data disk image
+        self: URL of this VM
+        peer: URL of the peer VM
     """
     release_dir = os.path.join(os.getcwd(), "release")
     verity_image = os.path.join(release_dir, os.path.basename(config.verity_image))
@@ -270,6 +286,12 @@ def start_release_vm(data_disk=None):
         f"-hda {verity_image} -hdb {verity_hash_tree} -load-config {vm_config_file} "
         f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
     )
+    
+    # Add peer and self locations
+    if peer:
+        base_cmd += f" -peer {peer}"
+    if self:
+        base_cmd += f" -self {self}"
     
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
@@ -434,6 +456,62 @@ def clean():
     run_command(f"rm -rf {config.dir.build}")
 
 
+def show_help():
+    """
+    Display detailed help information about available commands.
+    """
+    help_text = """
+HyperBEAM VM Automation Tool
+============================
+
+USAGE: 
+  ./run COMMAND [OPTIONS]
+  ./run COMMAND --help    (for command-specific help)
+
+COMMANDS:
+  init                Initialize the build environment (install dependencies, download SNP release)
+  setup_host          Set up the host system using the SNP release installer
+  build_base          Build the base VM image (unpack kernel, build initramfs, create VM)
+  
+  build_guest         Build the guest image (build content, set up verity, create VM config)
+    Options:
+      --hb-branch BRANCH     HyperBEAM branch to use
+      --ao-branch BRANCH     AO branch to use
+  
+  start               Start the VM using QEMU with the guest image configuration
+    Options:
+      --data-disk PATH       Path to data disk image
+      --self URL             URL of this VM
+      --peer URL             URL of the peer VM
+  
+  start_release       Start the VM in release mode using files from the release folder
+    Options:
+      --data-disk PATH       Path to data disk image
+      --self URL             URL of this VM
+      --peer URL             URL of the peer VM
+  
+  package_release     Package all files needed for starting the VM into a release folder
+  
+  download_release    Download a tar.gz release from the provided URL
+    Options:
+      --url URL              URL to a tar.gz release file (required)
+  
+  ssh                 SSH into the virtual machine
+  clean               Clean up the build directory
+  help                Display this help information
+
+EXAMPLES:
+  ./run init
+  ./run build_base
+  ./run build_guest --hb-branch main --ao-branch v1.0
+  ./run start --type router --peer-location 192.168.1.2 --self-location 192.168.1.1
+  ./run start --type compute --peer-location 192.168.1.1 --self-location 192.168.1.2
+  ./run start_release --type compute --peer-location 192.168.1.1 --self-location 192.168.1.2 --data-disk /path/to/disk.img
+  ./run download_release --url https://example.com/release.tar.gz
+    """
+    print(help_text)
+
+
 # -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
@@ -441,71 +519,134 @@ def main():
     """
     Parse command-line arguments and execute the corresponding task.
     """
+    # Create the main parser
     parser = argparse.ArgumentParser(
-        description="Automation tool equivalent to the Makefile"
+        description="HyperBEAM VM Automation Tool"
     )
-    parser.add_argument(
-        "target",
-        choices=[
-            "init",
-            "setup_host",
-            "build_base",
-            "build_guest",
-            "start",
-            "start_release",
-            "package_release",
-            "download_release",
-            "ssh",
-            "clean",
-        ],
-        help="Target task to execute",
-    )
-    parser.add_argument(
-        "--url",
-        help="URL to a tar.gz release file (required for download_release target)"
-    )
-    parser.add_argument(
+    
+    # Create subparsers for each command
+    subparsers = parser.add_subparsers(dest="target", help="Target task to execute")
+    
+    # Help command
+    help_parser = subparsers.add_parser("help", help="Display detailed help information")
+    
+    # Init command
+    init_parser = subparsers.add_parser("init", help="Initialize the build environment")
+    
+    # Setup host command
+    setup_host_parser = subparsers.add_parser("setup_host", help="Set up the host system")
+    
+    # Build base command
+    build_base_parser = subparsers.add_parser("build_base", help="Build the base VM image")
+    
+    # Build guest command
+    build_guest_parser = subparsers.add_parser("build_guest", help="Build the guest image")
+    build_guest_parser.add_argument(
         "--hb-branch",
-        help="HyperBEAM branch to use (optional for build_guest target)"
+        help="HyperBEAM branch to use"
     )
-    parser.add_argument(
+    build_guest_parser.add_argument(
         "--ao-branch",
-        help="AO branch to use (optional for build_guest target)"
+        help="AO branch to use"
     )
-    parser.add_argument(
+    
+    # Start command
+    start_parser = subparsers.add_parser("start", help="Start the VM")
+    start_parser.add_argument(
         "--data-disk",
-        help="Path to data disk image (optional for start and start_release targets)"
+        help="Path to data disk image"
     )
+    start_parser.add_argument(
+        "--peer",
+        required=True,
+        help="Location of the peer VM"
+    )
+    start_parser.add_argument(
+        "--self",
+        required=True,
+        help="Location of this VM"
+    )
+    
+    # Start release command
+    start_release_parser = subparsers.add_parser("start_release", help="Start the VM in release mode")
+    start_release_parser.add_argument(
+        "--data-disk",
+        help="Path to data disk image"
+    )
+    start_release_parser.add_argument(
+        "--self",
+        required=True,
+        help="Location of this VM"
+    )
+    start_release_parser.add_argument(
+        "--peer",
+        required=True,
+        help="Location of the peer VM"
+    )
+
+    # Package release command
+    package_release_parser = subparsers.add_parser("package_release", help="Package files for release")
+    
+    # Download release command
+    download_release_parser = subparsers.add_parser("download_release", help="Download a release")
+    download_release_parser.add_argument(
+        "--url",
+        required=True,
+        help="URL to a tar.gz release file (required)"
+    )
+    
+    # SSH command
+    ssh_parser = subparsers.add_parser("ssh", help="SSH into the virtual machine")
+    
+    # Clean command
+    clean_parser = subparsers.add_parser("clean", help="Clean up the build directory")
+    
     args = parser.parse_args()
+    
+    # Show help if no target is provided
+    if not args.target:
+        show_help()
+        sys.exit(0)
+        
+    # Handle help command
+    if args.target == "help":
+        show_help()
+        sys.exit(0)
+    
+    # Set configuration values for build_guest
     if args.target == "build_guest":
         if args.hb_branch:
             config.hb_branch = args.hb_branch
         if args.ao_branch:
             config.ao_branch = args.ao_branch
-
+    
+    # Download release and exit
     if args.target == "download_release":
-        if not args.url:
-            parser.error("The download_release target requires the --url argument.")
         download_release(args.url)
         sys.exit(0)
 
-    targets = {
-        "init": init,
-        "setup_host": setup_host,
-        "build_base": build_base_image,
-        "build_guest": build_guest_image,
-        "start": lambda: start_vm(args.data_disk),
-        "start_release": lambda: start_release_vm(args.data_disk),
-        "package_release": package_release,
-        "ssh": ssh_vm,
-        "clean": clean,
-    }
-
-    task = targets.get(args.target)
-    if task:
-        task()
+    # Execute the appropriate function based on target
+    if args.target == "init":
+        init()
+    elif args.target == "setup_host":
+        setup_host()
+    elif args.target == "build_base":
+        build_base_image()
+    elif args.target == "build_guest":
+        build_guest_image()
+    elif args.target == "start":
+        start_vm(args.data_disk, args.self, args.peer)
+    elif args.target == "start_release":
+        start_release_vm(args.data_disk, args.self, args.peer)
+    elif args.target == "package_release":
+        package_release()
+    elif args.target == "ssh":
+        ssh_vm()
+    elif args.target == "clean":
+        clean()
     else:
         print(f"Unknown target: {args.target}")
+        show_help()
         sys.exit(1)
 
 

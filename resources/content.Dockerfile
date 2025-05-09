@@ -53,7 +53,7 @@ RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
     git checkout <HB_BRANCH>
 
 # Copy the config flat configurations to HyperBEAM Dir before building release.
-COPY ./config.flat /build/HyperBEAM/config.flat
+COPY ./hyperbeam/config.flat /build/HyperBEAM/config.flat
 
 # Compile the application code using Rebar3
 RUN cd /build/HyperBEAM && \
@@ -71,7 +71,7 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
     cp -r servers/cu /release/cu
 
 # Copy the cu.env file to the release directory
-COPY cu.env /release/cu.env
+COPY ./cu/cu.env /release/cu.env
 
 # Generate a wallet and inject it into the cu.env file
 RUN WALLET=$(npx --yes @permaweb/wallet) && \
@@ -79,10 +79,10 @@ RUN WALLET=$(npx --yes @permaweb/wallet) && \
     echo "WALLET=${WALLET}" >> /release/cu/.env
 
 # Copy CU service file to /release
-COPY cu.service /release
+COPY ./cu/cu.service /release
 
 # Copy the service file to /release
-COPY hyperbeam.service /release
+COPY ./hyperbeam/hyperbeam.service /release
 
 # Clean up build files
 RUN rm -rf /build

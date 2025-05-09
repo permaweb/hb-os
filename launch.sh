@@ -63,6 +63,8 @@ usage() {
         echo " -qemu-port                 Port for QEMU monitor (default: 4444)"
         echo " -debug                     Enable debug mode"
         echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
+        echo " -peer URL      URL of the peer VM (required for compute VM type)"
+        echo " -self URL        URL of the self VM (required for compute VM type)"
         exit 1
 }
 
@@ -240,6 +242,14 @@ while [ -n "$1" ]; do
                 ;;
         -data-disk)
                 DATA_DISK="$2"
+                shift
+                ;;
+        -peer)
+                PEER="$2"
+                shift
+                ;;
+        -self)
+                SELF="$2"
                 shift
                 ;;
         *)
@@ -561,12 +571,21 @@ if [ -n "$TOML_CONFIG" ]; then
                         rm -rf ${QEMU_CMDLINE}
                         exit 1
                 fi
+                
+                # Check if required parameters are set before calling post_start.py
+                if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
+                    echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
+                    python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
+                else
+                    echo "Error: Missing required parameters for post-start script."
+                    echo "Inputs=${JSON_FILE:-'not set'}"
+                    echo "Self=${SELF:-'not set'}"
+                    echo "Peer=${PEER:-'not set'}"
+                    echo "Skipping post-start script execution."
+                fi
 
                 # Wrap the JSON file content with snp_hashes using jq
                 WRAPPED_JSON=$(jq '{snp_hashes: (. | del(.expected_hash))}' "$JSON_FILE")
-
-                # Send the POST request with the wrapped JSON
-                curl -X POST -H "Content-Type: application/json" -d "$WRAPPED_JSON" http://localhost:${HB_PORT}/~snp@1.0/init
 
                 # At the very end, print the desired JSON fields (excluding expected_hash)
                 # if JSON_FILE file exists
@@ -606,12 +625,9 @@ else
                 sudo apt-get update && sudo apt-get install -y sshpass
         fi
 
-        # Make base_setup.sh executable
-        chmod +x resources/base_setup.sh
-
         # Copy the .deb files and the setup script to the guest
         sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
-        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 resources/base_setup.sh hb@localhost:
+        sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
         # Run the setup script on the guest
         sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
