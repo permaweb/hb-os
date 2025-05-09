@@ -574,13 +574,13 @@ if [ -n "$TOML_CONFIG" ]; then
                 
                 # Check if required parameters are set before calling post_start.py
                 if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
-                    echo "Running post-start script with JSON_FILE=$JSON_FILE, SELF=$SELF, PEER=$PEER"
-                    python3 ./scripts/post_start.py --json_file "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
+                    echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
+                    python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
                 else
                     echo "Error: Missing required parameters for post-start script."
-                    echo "JSON_FILE=${JSON_FILE:-'not set'}"
-                    echo "SELF=${SELF:-'not set'}"
-                    echo "PEER=${PEER:-'not set'}"
+                    echo "Inputs=${JSON_FILE:-'not set'}"
+                    echo "Self=${SELF:-'not set'}"
+                    echo "Peer=${PEER:-'not set'}"
                     echo "Skipping post-start script execution."
                 fi
 
