@@ -25,7 +25,8 @@ CONFIG_DIR = os.path.join(script_dir, '..', 'config')
 from node_api import (
     get_node_info, get_node_process_routes, register_node, meta_post,
     initialize_greenzone, join_node, become_node,
-    print_error, print_success, print_warning, print_info, print_step, print_command, print_debug, Colors
+    print_error, print_success, print_warning, print_info, print_step, print_command, print_debug, Colors,
+    encrypt_volume_secret, get_volume_public_key, mount
 )
 
 def run_command(cmd):
@@ -268,9 +269,9 @@ def main():
     
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Post-start script for VM initialization')
-    parser.add_argument('--inputs', required=True, help='Path to the JSON file containing VM configuration')
-    parser.add_argument('--self', required=True, help='URL of the current VM')
-    parser.add_argument('--peer', help='URL of the peer VM (if any)')
+    parser.add_argument('--inputs', required=False, help='Path to the JSON file containing VM configuration')
+    parser.add_argument('--self', required=False, help='URL of the current VM')
+    parser.add_argument('--peer', required=False, help='URL of the peer VM (if any)')
     
     # Default values
     node_info = None
@@ -308,6 +309,16 @@ def main():
     # If config is loaded successfully send requests to node
     if config:
         is_greenzone_host = False
+        
+        # Encrypt volume key if it exists in config and update config with encrypted volume key
+        if config and 'volume_key' in config:
+            volume_key = config['volume_key']
+            print_info(f"Volume key found in config, encrypting volume key")
+            public_key = get_volume_public_key(node_info['location'])
+            encrypted_volume_key = encrypt_volume_secret(public_key, volume_key)
+            config['volume_key'] = encrypted_volume_key
+            print_info(f"Encrypted volume key: {encrypted_volume_key}")
+        
         # Check if greenzone required config exists and set is_greenzone_host to True if so
         # If greenzone required config is empty, remove it from configuration
         if config and 'green_zone_required_config' in config:
@@ -316,9 +327,17 @@ def main():
                 print_info(f"Its removed so the node will use the default greenzone required config")
                 del config['green_zone_required_config']
             is_greenzone_host = True
-
+        
         # Post updated configuration to compute node
         meta_post(node_info['location'], config, 'json@1.0')
+        
+        # Mount volume
+        if config and 'volume_key' in config:
+            print_info(f"Volume key found in config, mounting volume")
+            mount(node_info['location'])
+        else:
+            print_debug(f"No volume key in config, skipping volume mounting")
+        
         # Register compute node with peer if router_peer_location is configured
         if config and 'router_peer_location' in config:
             print_info(f"Router peer location found in config, registering node")

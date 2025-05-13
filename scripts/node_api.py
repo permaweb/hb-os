@@ -6,6 +6,10 @@ These functions provide a Python equivalent of the JavaScript API.
 
 import requests
 import json
+import base64
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.backends import default_backend
 
 # ANSI color codes for terminal output
 class Colors:
@@ -245,4 +249,90 @@ def become_node(node_url, peer_location, peer_id):
     except requests.RequestException as e:
         print_error(f"Error becoming node: {e}")
         return None 
+
+def mount(node_url):
+    """
+    Mount a volume
+    
+    Args:
+        node_url: URL of the node
+    """
+    print_command(f"~volume@1.0/mount")
+    print_info(f"Path: {node_url}/~volume@1.0/mount")
+    try:
+        response = requests.get(
+            f"{node_url}/~volume@1.0/mount",
+        )
+        response_body = response.text
+        print_info(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            print_success(f"Body: {response_body}")
+        else:
+            print_warning(f"Error mounting volume: {response.status_code}")
+            print_warning(f"Body: {response_body}")
+        return response
+    except requests.RequestException as e:
+        print_error(f"Error mounting volume: {e}")
+        return None
+
+def get_volume_public_key(node_url):
+    """
+    Retrieves the node's public key for secure key exchange
+    This allows users to securely exchange encryption keys by first encrypting 
+    their volume key with the node's public key
+    
+    Args:
+        node_url: URL of the node
+        
+    Returns:
+        str: The node's public key
+    """
+    print_command(f"~volume@1.0/public_key")
+    print_info(f"Path: {node_url}/~volume@1.0/public_key")
+    try:
+        response = requests.get(f"{node_url}/~volume@1.0/public_key")
+        if response.status_code == 200:
+            public_key = response.headers.get('public_key')
+            print_success(f"Public key: {public_key}")
+            return public_key
+        else:
+            print_warning(f"Error getting volume public key: {response.status_code}")
+            print_warning(response.text)
+            return None
+    except requests.RequestException as e:
+        print_error(f"Error getting volume public key: {e}")
+        raise
+
+def encrypt_volume_secret(public_key_base64, secret):
+    """
+    Encrypts a secret with a node's public key and returns the base64-encoded result
+    
+    Args:
+        public_key_base64: The base64-encoded DER-format public key from get_volume_public_key()
+        secret: The secret to encrypt (e.g., volume encryption key)
+        
+    Returns:
+        str: Base64 encoded encrypted secret
+    """
+    try:
+        # Decode the base64-encoded DER format key
+        der_key = base64.b64decode(public_key_base64)
+        
+        # Load the DER key
+        public_key = serialization.load_der_public_key(
+            der_key,
+            backend=default_backend()
+        )
+        
+        # Encrypt with the public key
+        encrypted = public_key.encrypt(
+            secret.encode() if isinstance(secret, str) else secret,
+            padding.PKCS1v15()
+        )
+        
+        # Return base64 encoded encrypted data
+        return base64.b64encode(encrypted).decode()
+    except Exception as e:
+        print_error(f"Error encrypting with volume key: {e}")
+        raise 
         
