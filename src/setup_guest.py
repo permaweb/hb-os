@@ -221,14 +221,15 @@ def find_root_fs_device():
     root_fs_found = ""
     if SRC_ROOT_FS_DEVICE and os.path.exists(SRC_ROOT_FS_DEVICE):
         print(f"Found the following filesystem: {SRC_ROOT_FS_DEVICE}")
-        while root_fs_found == "":
-            choice = input("Do you confirm that this is correct? (y/n): ").strip().lower()
-            if choice == "y":
-                root_fs_found = "1"
-            elif choice == "n":
-                root_fs_found = "0"
-            else:
-                print("Invalid choice. Please enter 'y' or 'n'.")
+        root_fs_found = "1"
+        # while root_fs_found == "":
+        #     choice = input("Do you confirm that this is correct? (y/n): ").strip().lower()
+        #     if choice == "y":
+        #         root_fs_found = "1"
+        #     elif choice == "n":
+        #         root_fs_found = "0"
+        #     else:
+        #         print("Invalid choice. Please enter 'y' or 'n'.")
     else:
         print(f"Failed to identify root filesystem {SRC_ROOT_FS_DEVICE}.")
         root_fs_found = "0"
