@@ -540,7 +540,8 @@ fi
 if [ -n "$TOML_CONFIG" ]; then
         echo "Launching QEMU as a background service..."
 
-        bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        # bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
+        nohup bash ${QEMU_CMDLINE} > ${QEMU_CONSOLE_LOG} 2>&1 &
         echo "QEMU is running in the background."
 
         if [ "$DEBUG" = "0" ]; then

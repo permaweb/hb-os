@@ -504,9 +504,8 @@ EXAMPLES:
   ./run init
   ./run build_base
   ./run build_guest --hb-branch main --ao-branch v1.0
-  ./run start --type router --peer-location 192.168.1.2 --self-location 192.168.1.1
-  ./run start --type compute --peer-location 192.168.1.1 --self-location 192.168.1.2
-  ./run start_release --type compute --peer-location 192.168.1.1 --self-location 192.168.1.2 --data-disk /path/to/disk.img
+  ./run start --data-disk /path/to/disk.img --peer-location 192.168.1.2 --self-location 192.168.1.1
+  ./run start_release --data-disk /path/to/disk.img --peer-location 192.168.1.1 --self-location 192.168.1.2
   ./run download_release --url https://example.com/release.tar.gz
     """
     print(help_text)
@@ -558,12 +557,12 @@ def main():
     )
     start_parser.add_argument(
         "--peer",
-        required=True,
+        required=False,
         help="Location of the peer VM"
     )
     start_parser.add_argument(
         "--self",
-        required=True,
+        required=False,
         help="Location of this VM"
     )
     
@@ -575,12 +574,12 @@ def main():
     )
     start_release_parser.add_argument(
         "--self",
-        required=True,
+        required=False,
         help="Location of this VM"
     )
     start_release_parser.add_argument(
         "--peer",
-        required=True,
+        required=False,
         help="Location of the peer VM"
     )
 
@@ -635,9 +634,9 @@ def main():
     elif args.target == "build_guest":
         build_guest_image()
     elif args.target == "start":
-        start_vm(args.data_disk, args.self, args.peer)
+        start_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80")
     elif args.target == "start_release":
-        start_release_vm(args.data_disk, args.self, args.peer)
+        start_release_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80")
     elif args.target == "package_release":
         package_release()
     elif args.target == "ssh":
