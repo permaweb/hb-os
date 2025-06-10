@@ -572,17 +572,18 @@ if [ -n "$TOML_CONFIG" ]; then
                         rm -rf ${QEMU_CMDLINE}
                         exit 1
                 fi
-                
-                # Check if required parameters are set before calling post_start.py
-                if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
-                    echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
-                    python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
-                else
-                    echo "Error: Missing required parameters for post-start script."
-                    echo "Inputs=${JSON_FILE:-'not set'}"
-                    echo "Self=${SELF:-'not set'}"
-                    echo "Peer=${PEER:-'not set'}"
-                    echo "Skipping post-start script execution."
+                if [ "$DEBUG" = "0" ]; then
+                    # Check if required parameters are set before calling post_start.py
+                    if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
+                        echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
+                        python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
+                    else
+                        echo "Error: Missing required parameters for post-start script."
+                        echo "Inputs=${JSON_FILE:-'not set'}"
+                        echo "Self=${SELF:-'not set'}"
+                        echo "Peer=${PEER:-'not set'}"
+                        echo "Skipping post-start script execution."
+                    fi
                 fi
 
                 # Wrap the JSON file content with snp_hashes using jq

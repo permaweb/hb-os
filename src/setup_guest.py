@@ -291,7 +291,27 @@ def prepare_verity_fs():
         subprocess.run(["sudo", "chroot", DST_FOLDER, "dmesg", "--console-off"], check=False)
         print("Black box preparation complete. No TTY or console interfaces are accessible.")
     else:
-        print("Debug mode enabled. Skipping black box preparation.")
+        print("Debug mode enabled. Configuring root user...")
+        
+        # Set root password in the chroot environment
+        print("Setting root password...")
+        subprocess.run(["sudo", "chroot", DST_FOLDER, "sh", "-c", "echo 'root:hb' | chpasswd"], check=True)
+        
+        # Update sshd_config to allow root login and password authentication
+        sshd_config_path = os.path.join(DST_FOLDER, "etc", "ssh", "sshd_config")
+        print("Updating SSH configuration...")
+        subprocess.run([
+            "sudo", "sed", "-i", "-E",
+            "-e", "s/^\\s*#?\\s*PermitRootLogin\\s+.*/PermitRootLogin yes/",
+            "-e", "s/^\\s*#?\\s*PasswordAuthentication\\s+.*/PasswordAuthentication yes/",
+            sshd_config_path
+        ], check=True)
+        
+        # Enable and start SSH service in the chroot environment
+        print("Enabling SSH service...")
+        subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "enable", "ssh.service"], check=True)
+        
+        print("Debug mode configuration complete.")
 
     # Remove any data in tmp folder
     subprocess.run(["sudo", "rm", "-rf", os.path.join(DST_FOLDER, "tmp")], check=True)
@@ -373,14 +393,23 @@ def setup_guest(src_image, build_dir, out_image,
     subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
                     hb_src, hb_dst], check=True)
 
-    print("Copy HyperBEAM service..")
-    hb_service_src = os.path.join(BUILD_DIR, "content", "hyperbeam.service")
-    hb_service_dst = os.path.join(DST_FOLDER, "etc", "systemd", "system", "hyperbeam.service")
-    subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    hb_service_src, hb_service_dst], check=True)
+    if DEBUG == "0":
+        print("Copying HyperBEAM service..")
+        hb_service_src = os.path.join(BUILD_DIR, "content", "hyperbeam.service")
+        hb_service_dst = os.path.join(DST_FOLDER, "etc", "systemd", "system", "hyperbeam.service")
+        subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
+                        hb_service_src, hb_service_dst], check=True)
 
-    print("Enabling HyperBEAM service..")
-    subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "enable", "hyperbeam.service"], check=True)
+        print("Copy HyperBEAM service..")
+        hb_service_src = os.path.join(BUILD_DIR, "content", "hyperbeam.service")
+        hb_service_dst = os.path.join(DST_FOLDER, "etc", "systemd", "system", "hyperbeam.service")
+        subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
+                        hb_service_src, hb_service_dst], check=True)
+
+        print("Enabling HyperBEAM service..")
+        subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "enable", "hyperbeam.service"], check=True)
+    else:
+        print("Debug mode enabled. Skipping HyperBEAM service copy.")
 
     print("Copying CU..")
     cu_src = os.path.join(BUILD_DIR, "content", "cu")
