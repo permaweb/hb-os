@@ -35,7 +35,7 @@ def build_guest_content(out_dir, dockerfile, hb_branch, ao_branch):
     try:
         # Note: In the command below the build context is ".", because we already cd'ed.
         if dockerfile_arg:
-            build_cmd = f"docker build -t {docker_img} -f {dockerfile_arg} ."
+            build_cmd = f"docker build --build-arg CACHEBUST=$(date +%s) -t {docker_img} -f {dockerfile_arg} ."
         print("Running command:", build_cmd)
         subprocess.run(build_cmd, shell=True, check=True)
     finally:
