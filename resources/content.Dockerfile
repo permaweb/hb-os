@@ -76,7 +76,7 @@ COPY ./hyperbeam/config.flat /build/HyperBEAM/config.flat
 
 # Compile the application code using Rebar3
 RUN cd /build/HyperBEAM && \
-    rebar3 release && \
+    rebar3 release as no_events && \
     cp -r _build/default/rel/hb /release/hb && \
     mkdir -p /release/hb/test && \
     cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd
