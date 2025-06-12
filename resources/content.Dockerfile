@@ -20,16 +20,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Build and Install Erlang/OTP
-RUN git clone https://github.com/erlang/otp.git && \
+RUN git clone --depth=1 --branch maint-27 https://github.com/erlang/otp.git && \
     cd otp && \
-    git checkout maint-27 && \
     ./configure --without-wx --without-debugger --without-observer --without-et && \
     make -j$(nproc) && \
     sudo make install && \
     cd .. && rm -rf otp
 
 # Build and Install Rebar3
-RUN git clone https://github.com/erlang/rebar3.git && \
+RUN git clone --depth=1 https://github.com/erlang/rebar3.git && \
     cd rebar3 && \
     ./bootstrap && \
     sudo mv rebar3 /usr/local/bin/ && \
@@ -46,21 +45,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
 
 # Set up build directories
 RUN mkdir -p /build /release
-
-# Clone the HyperBEAM repository
-RUN git clone https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
-    cd /build/HyperBEAM && \
-    git checkout <HB_BRANCH>
-
-# Copy the config flat configurations to HyperBEAM Dir before building release.
-COPY ./hyperbeam/config.flat /build/HyperBEAM/config.flat
-
-# Compile the application code using Rebar3
-RUN cd /build/HyperBEAM && \
-    rebar3 release && \
-    cp -r _build/default/rel/hb /release/hb && \
-    mkdir -p /release/hb/test && \
-    cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd
 
 # Clone the subdirectory "servers/cu" from the "permaweb/ao" repository using sparse checkout
 RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.git /build/ao && \
@@ -80,6 +64,22 @@ RUN WALLET=$(npx --yes @permaweb/wallet) && \
 
 # Copy CU service file to /release
 COPY ./cu/cu.service /release
+
+# Add cache buster to prevent git clone caching
+ARG CACHEBUST=1
+
+# Clone the HyperBEAM repository
+RUN git clone -depth=1 --branch <HB_BRANCH> https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM
+
+# Copy the config flat configurations to HyperBEAM Dir before building release.
+COPY ./hyperbeam/config.flat /build/HyperBEAM/config.flat
+
+# Compile the application code using Rebar3
+RUN cd /build/HyperBEAM && \
+    rebar3 release && \
+    cp -r _build/default/rel/hb /release/hb && \
+    mkdir -p /release/hb/test && \
+    cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd
 
 # Copy the service file to /release
 COPY ./hyperbeam/hyperbeam.service /release
