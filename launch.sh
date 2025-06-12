@@ -18,6 +18,7 @@ CERTS_PATH=
 
 # linked to cli flag
 ENABLE_ID_BLOCK=
+NO_AUTO="0"
 
 SEV="0"
 SEV_ES="0"
@@ -65,6 +66,7 @@ usage() {
         echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
         echo " -peer URL      URL of the peer VM (required for compute VM type)"
         echo " -self URL        URL of the self VM (required for compute VM type)"
+        echo " -no-auto          Disable automatic post-start script execution"
         exit 1
 }
 
@@ -251,6 +253,9 @@ while [ -n "$1" ]; do
         -self)
                 SELF="$2"
                 shift
+                ;;
+        -no-auto)
+                NO_AUTO="1"
                 ;;
         *)
                 usage
@@ -574,9 +579,11 @@ if [ -n "$TOML_CONFIG" ]; then
                 fi
                 if [ "$DEBUG" = "0" ]; then
                     # Check if required parameters are set before calling post_start.py
-                    if [ -n "$JSON_FILE" ] && [ -n "$SELF" ]; then
+                    if [ -n "$JSON_FILE" ] && [ -n "$SELF" ] && [ "$NO_AUTO" = "0" ]; then
                         echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
                         python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
+                    elif [ "$NO_AUTO" = "1" ]; then
+                        echo "Skipping post-start script execution due to --no-auto flag."
                     else
                         echo "Error: Missing required parameters for post-start script."
                         echo "Inputs=${JSON_FILE:-'not set'}"
