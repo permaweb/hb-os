@@ -12,6 +12,7 @@ import subprocess
 import shutil
 import tarfile
 import requests
+import json
 
 from config.config import config
 from src.dependencies import install_dependencies
@@ -249,6 +250,24 @@ def start_vm(data_disk=None, self=None, peer=None, no_auto=False):
         peer: URL of the peer VM
         no_auto: Skip automatic execution of post-start script
     """
+    # Check if inputs.json exists and update vcpus, otherwise add -no-auto
+    inputs_file = os.path.join(os.getcwd(), "inputs.json")
+    
+    if os.path.exists(inputs_file):
+        print(f"Found {inputs_file}, updating vcpus with config.vcpu_count={config.vcpu_count}...")
+        with open(inputs_file, "r") as f:
+            inputs_data = json.load(f)
+        
+        inputs_data["vcpus"] = config.vcpu_count
+        
+        with open(inputs_file, "w") as f:
+            json.dump(inputs_data, f, indent=2)
+        
+        print(f"Updated inputs.json with vcpus={config.vcpu_count}")
+    else:
+        print(f"Warning: {inputs_file} not found, adding -no-auto flag")
+        no_auto = True
+
     base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {config.verity_image} -hdb {config.verity_hash_tree} -load-config {config.vm_config_file} "
@@ -287,6 +306,24 @@ def start_release_vm(data_disk=None, self=None, peer=None, no_auto=False):
     verity_hash_tree = os.path.join(release_dir, os.path.basename(config.verity_hash_tree))
     vm_config_file = os.path.join(release_dir, os.path.basename(config.vm_config_file))
 
+    # Check if inputs.json exists and update vcpus, otherwise add -no-auto
+    inputs_file = os.path.join(os.getcwd(), "inputs.json")
+    
+    if os.path.exists(inputs_file):
+        print(f"Found {inputs_file}, updating vcpus with config.vcpu_count={config.vcpu_count}...")
+        with open(inputs_file, "r") as f:
+            inputs_data = json.load(f)
+        
+        inputs_data["vcpus"] = config.vcpu_count
+        
+        with open(inputs_file, "w") as f:
+            json.dump(inputs_data, f, indent=2)
+        
+        print(f"Updated inputs.json with vcpus={config.vcpu_count}")
+    else:
+        print(f"Warning: {inputs_file} not found, adding -no-auto flag")
+        no_auto = True
+     
     base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
         f"-hda {verity_image} -hdb {verity_hash_tree} -load-config {vm_config_file} "
