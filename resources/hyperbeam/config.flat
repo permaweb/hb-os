@@ -1,8 +1,2 @@
 port: 10000
 operator: unclaimed
-on/start/device: scheduler@1.0
-on/start/path: location
-on/start/method: POST
-on/start/accept-codec: ans104@1.0
-on/start/hook/result: ignore
-on/start/hook/commit-request: true
