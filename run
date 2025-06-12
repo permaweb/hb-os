@@ -239,7 +239,7 @@ def run_setup():
     run_command(cmd)
 
 
-def start_vm(data_disk=None, self=None, peer=None):
+def start_vm(data_disk=None, self=None, peer=None, no_auto=False):
     """
     Run the VM using QEMU with the guest image configuration.
     
@@ -247,6 +247,7 @@ def start_vm(data_disk=None, self=None, peer=None):
         data_disk: Optional path to a data disk image
         self: URL of this VM
         peer: URL of the peer VM
+        no_auto: Skip automatic execution of post-start script
     """
     base_cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_snp_params} "
@@ -260,6 +261,10 @@ def start_vm(data_disk=None, self=None, peer=None):
     if self:
         base_cmd += f" -self {self}"
     
+    # Add no-auto flag if specified
+    if no_auto:
+        base_cmd += " -no-auto"
+    
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
     else:
@@ -267,7 +272,7 @@ def start_vm(data_disk=None, self=None, peer=None):
         
     run_command(cmd)
 
-def start_release_vm(data_disk=None, self=None, peer=None):
+def start_release_vm(data_disk=None, self=None, peer=None, no_auto=False):
     """
     Start the VM in release mode, using files from the release folder.
     
@@ -275,6 +280,7 @@ def start_release_vm(data_disk=None, self=None, peer=None):
         data_disk: Optional path to a data disk image
         self: URL of this VM
         peer: URL of the peer VM
+        no_auto: Skip automatic execution of post-start script
     """
     release_dir = os.path.join(os.getcwd(), "release")
     verity_image = os.path.join(release_dir, os.path.basename(config.verity_image))
@@ -292,6 +298,10 @@ def start_release_vm(data_disk=None, self=None, peer=None):
         base_cmd += f" -peer {peer}"
     if self:
         base_cmd += f" -self {self}"
+    
+    # Add no-auto flag if specified
+    if no_auto:
+        base_cmd += " -no-auto"
     
     if data_disk is not None:
         cmd = f"{base_cmd} -data-disk {data_disk}"
@@ -565,6 +575,11 @@ def main():
         required=False,
         help="Location of this VM"
     )
+    start_parser.add_argument(
+        "--no-auto",
+        action="store_true",
+        help="Skip automatic execution of post-start script"
+    )
     
     # Start release command
     start_release_parser = subparsers.add_parser("start_release", help="Start the VM in release mode")
@@ -581,6 +596,11 @@ def main():
         "--peer",
         required=False,
         help="Location of the peer VM"
+    )
+    start_release_parser.add_argument(
+        "--no-auto",
+        action="store_true",
+        help="Skip automatic execution of post-start script"
     )
 
     # Package release command
@@ -634,9 +654,9 @@ def main():
     elif args.target == "build_guest":
         build_guest_image()
     elif args.target == "start":
-        start_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80")
+        start_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80", args.no_auto)
     elif args.target == "start_release":
-        start_release_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80")
+        start_release_vm(args.data_disk, args.self or "http://localhost:80", args.peer or "http://localhost:80", args.no_auto)
     elif args.target == "package_release":
         package_release()
     elif args.target == "ssh":
