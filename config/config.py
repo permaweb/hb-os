@@ -3,7 +3,7 @@ import os
 
 config = {
     # Branches for HyperBEAM and AO.
-    "hb_branch": "origin/main",
+    "hb_branch": "main",
     "ao_branch": "tillathehun0/cu-experimental",
 
     # Debugging and KVM.
