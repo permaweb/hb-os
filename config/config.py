@@ -7,7 +7,7 @@ config = {
     "ao_branch": "tillathehun0/cu-experimental",
 
     # Debugging and KVM.
-    "debug": "1",
+    "debug": "0",
     "enable_kvm": "1",
     
     # Image Files.
@@ -18,7 +18,7 @@ config = {
     "cmdline": "console=ttyS0 earlyprintk=serial root=/dev/sda",
     
     # QEMU Parameters.
-    "memory": "8192",
+    "memory": "204800",
     "hb_port": "80",
     "qemu_port": "4444",
     
