@@ -3,11 +3,11 @@ import os
 
 config = {
     # Branches for HyperBEAM and AO.
-    "hb_branch": "origin/main",
+    "hb_branch": "main",
     "ao_branch": "tillathehun0/cu-experimental",
 
     # Debugging and KVM.
-    "debug": "0",
+    "debug": "1",
     "enable_kvm": "1",
     
     # Image Files.
@@ -18,7 +18,7 @@ config = {
     "cmdline": "console=ttyS0 earlyprintk=serial root=/dev/sda",
     
     # QEMU Parameters.
-    "memory": "204800",
+    "memory": "8192",
     "hb_port": "80",
     "qemu_port": "4444",
     
