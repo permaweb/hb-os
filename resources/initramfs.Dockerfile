@@ -13,3 +13,6 @@ RUN apt-get update && \
 
 ENV TZ=Etc/UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN mkdir -p /etc/modprobe.d && \
+    echo 'install nvidia /sbin/modprobe ecdsa_generic ecdh; /sbin/modprobe --ignore-install nvidia' > /etc/modprobe.d/nvidia-lkca.conf && \
+    chmod 644 /etc/modprobe.d/nvidia-lkca.conf
