@@ -386,7 +386,7 @@ else
 fi
 
 # add number of VCPUs
-[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=255"
+[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=32"
 
 # define guest memory
 add_opts "-m ${MEM}M"
@@ -405,7 +405,7 @@ if [ "${SEV_SNP}" = 1 ]; then
         add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_VARS}"
     fi
 else
-    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
+    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly=on"
     if [ -n "$UEFI_VARS" ]; then
         add_opts "-drive if=pflash,format=raw,unit=1,file=${UEFI_VARS}"
     fi
@@ -447,6 +447,15 @@ for ((i = 0; i < ${#DISKS[@]}; i++)); do
         fi
     fi
 done
+
+# add GPU passthrough parameters
+NVIDIA_GPU=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
+
+if [ -n "$NVIDIA_GPU" ]; then
+    add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
+    add_opts "-device vfio-pci,host=$NVIDIA_GPU,bus=pci.1"
+    add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+fi
 
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
@@ -544,6 +553,10 @@ fi
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
     echo "Launching QEMU as a background service..."
+    
+    # add sev-snp guest support for nvtrust 
+    add_opts "-machine confidential-guest-support=sev0,vmport=off"
+    add_opts "-object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1"
 
     # bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
     nohup bash ${QEMU_CMDLINE} >${QEMU_CONSOLE_LOG} 2>&1 &
