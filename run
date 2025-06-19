@@ -68,6 +68,8 @@ def init():
             shutil.copyfileobj(r.raw, f)
     run_command(f"tar -xf {tarball} -C {config.dir.build}")
     run_command(f"rm {tarball}")
+    # Download the GPU admin tools
+    run_command(f"cd {config.dir.build} && git clone https://github.com/nvidia/gpu-admin-tools && cd .. ")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -485,7 +487,12 @@ def setup_host():
     """
     snp_release_dir = os.path.join(config.dir.build, "snp-release")
     run_command(f"cd {snp_release_dir} && sudo ./install.sh")
-
+def setup_gpu():
+    """
+    Setup the GPU CC for the host system.
+    """
+    gpu_admin_tools_dir = os.path.join(config.dir.build, "gpu-admin-tools")
+    run_command(f"cd {gpu_admin_tools_dir} && sudo python3 ./nvidia_gpu_tools.py --devices gpus --set-cc-mode=on --reset-after-cc-mode-switch")
 
 def ssh_vm():
     """
@@ -581,6 +588,9 @@ def main():
     
     # Setup host command
     setup_host_parser = subparsers.add_parser("setup_host", help="Set up the host system")
+    
+    # Setup GPU command
+    setup_gpu_parser = subparsers.add_parser("setup_gpu", help="Setup the GPU CC for the host system")
     
     # Build base command
     build_base_parser = subparsers.add_parser("build_base", help="Build the base VM image")
@@ -686,6 +696,8 @@ def main():
         init()
     elif args.target == "setup_host":
         setup_host()
+    elif args.target == "setup_gpu":
+        setup_gpu()
     elif args.target == "build_base":
         build_base_image()
     elif args.target == "build_guest":
