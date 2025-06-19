@@ -489,10 +489,18 @@ def setup_host():
     run_command(f"cd {snp_release_dir} && sudo ./install.sh")
 def setup_gpu():
     """
-    Setup the GPU CC for the host system.
+    Setup the GPU CC for the host system and configure GPU passthrough.
     """
     gpu_admin_tools_dir = os.path.join(config.dir.build, "gpu-admin-tools")
+    
+    # Enable GPU CC mode
+    print("Setting up GPU Confidential Computing mode...")
     run_command(f"cd {gpu_admin_tools_dir} && sudo python3 ./nvidia_gpu_tools.py --devices gpus --set-cc-mode=on --reset-after-cc-mode-switch")
+    
+    # Configure GPU passthrough using the dedicated script
+    print("Configuring GPU passthrough...")
+    passthrough_script = os.path.join(os.getcwd(), "scripts", "gpu_passthrough.sh")
+    run_command(f"sudo {passthrough_script} setup")
 
 def ssh_vm():
     """
