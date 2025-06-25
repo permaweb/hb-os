@@ -459,7 +459,7 @@ fi
 
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
-    add_opts "-machine memory-encryption=sev0,vmport=off"
+    add_opts "-machine confidential-guest-support=sev0,vmport=off"
     get_cbitpos
 
     if [[ -z "$SEV_POLICY" ]]; then
@@ -555,8 +555,6 @@ if [ -n "$TOML_CONFIG" ]; then
     echo "Launching QEMU as a background service..."
     
     # add sev-snp guest support for nvtrust 
-    add_opts "-machine confidential-guest-support=sev0,vmport=off"
-    add_opts "-object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1"
 
     # bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
     nohup bash ${QEMU_CMDLINE} >${QEMU_CONSOLE_LOG} 2>&1 &
