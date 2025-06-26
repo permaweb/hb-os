@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check for NVIDIA GPU parameter (empty means no GPU)
-NVIDIA_GPU=${1:-""}
+USE_GPU=${1:-""}
 
 # Install Node.js
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -13,8 +13,8 @@ sudo dpkg -i linux-*.deb
 rm -rf linux-*.deb
 
 # Install Nvidia driver only if NVIDIA GPU is detected
-if [ -n "$NVIDIA_GPU" ]; then
-    echo "NVIDIA GPU detected ($NVIDIA_GPU), installing NVIDIA drivers..."
+if [ "$USE_GPU" = "1" ]; then
+    echo "GPU enabled, installing NVIDIA drivers..."
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 

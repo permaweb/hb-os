@@ -239,7 +239,7 @@ def run_setup():
     cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_extra_params} "
         f"-hda {config.vm_image_base_path} -hdb {config.vm_cloud_config} "
-        f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
+        f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm} -gpu {config.gpu}"
     )
     run_command(cmd)
 
