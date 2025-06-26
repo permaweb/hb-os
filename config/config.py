@@ -9,6 +9,7 @@ config = {
     # Debugging and KVM.
     "debug": "0",
     "enable_kvm": "1",
+    "gpu": "1",
     
     # Image Files.
     "base_image": "base.qcow2",
@@ -66,6 +67,7 @@ class Config:
         # Global flag from the config dictionary.
         self.debug = config["debug"]
         self.enable_kvm = config["enable_kvm"]
+        self.gpu = config["gpu"]
 
         # Build directories and resources.
         self.dir = Directories()

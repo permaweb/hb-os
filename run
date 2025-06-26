@@ -121,6 +121,7 @@ def initramfs_build():
     init_script = config.initramfs_script
     initrd = config.initrd
     dockerfile = config.initramfs_dockerfile
+    target = "gpu" if config.gpu == "1" else "cpu"
 
     build_initramfs(
         kernel_dir=kernel_dir,
@@ -129,6 +130,7 @@ def initramfs_build():
         context_dir=resource_dir,
         out=initrd,
         build_dir=build_dir,
+        target=target,
     )
 
 

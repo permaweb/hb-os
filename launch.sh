@@ -459,7 +459,11 @@ fi
 
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
-    add_opts "-machine confidential-guest-support=sev0,vmport=off"
+    if [ -n "$NVIDIA_GPU" ]; then
+        add_opts "-machine confidential-guest-support=sev0,vmport=off"
+    else
+        add_opts "-machine memory-encryption=sev0,vmport=off"
+    fi
     get_cbitpos
 
     if [[ -z "$SEV_POLICY" ]]; then
@@ -553,8 +557,6 @@ fi
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
     echo "Launching QEMU as a background service..."
-    
-    # add sev-snp guest support for nvtrust 
 
     # bash ${QEMU_CMDLINE} 2>&1 | tee -a ${QEMU_CONSOLE_LOG} &
     nohup bash ${QEMU_CMDLINE} >${QEMU_CONSOLE_LOG} 2>&1 &
@@ -651,8 +653,8 @@ else
     sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 build/snp-release/linux/guest/*.deb hb@localhost:
     sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
-    # Run the setup script on the guest
-    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
+    # Run the setup script on the guest with GPU detection result
+    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh '$NVIDIA_GPU'"
 fi
 
 # restore the mapping

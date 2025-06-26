@@ -5,7 +5,7 @@ import subprocess
 import shutil
 import argparse
 
-def build_initramfs(kernel_dir, init_script, dockerfile, context_dir, build_dir, init_patch=None, out=None):
+def build_initramfs(kernel_dir, init_script, dockerfile, context_dir, build_dir, init_patch=None, out=None, target="cpu"):
     """
     Build an initramfs image by exporting a Docker container filesystem,
     copying kernel modules, binaries, and an init script (optionally patching it),
@@ -19,6 +19,7 @@ def build_initramfs(kernel_dir, init_script, dockerfile, context_dir, build_dir,
       out (str, optional): Output file path for the generated initramfs image.
                            Defaults to "<build_dir>/initramfs.cpio.gz".
       build_dir (str, optional): Directory where all files will be written (default: "build").
+      target (str, optional): Build target, either "cpu" or "gpu" (default: "cpu").
     """
 
     # Validate required paths.
@@ -38,7 +39,7 @@ def build_initramfs(kernel_dir, init_script, dockerfile, context_dir, build_dir,
 
     # Build the Docker image.
     docker_img = "nano-vm-rootfs"
-    print("Building Docker image..")
+    print(f"Building Docker image for target: {target}")
 
     # If dockerfile is a file (i.e. a Dockerfile), use its parent as context.
     if os.path.isfile(dockerfile):
@@ -51,7 +52,9 @@ def build_initramfs(kernel_dir, init_script, dockerfile, context_dir, build_dir,
     try:
         # Note: In the command below the build context is ".", because we already cd'ed.
         if dockerfile_arg:
-            build_cmd = f"docker build -t {docker_img} -f {dockerfile_arg} ."
+            build_cmd = f"docker build -t {docker_img} -f {dockerfile_arg} --target {target} ."
+        else:
+            build_cmd = f"docker build -t {docker_img} --target {target} ."
         print("Running command:", build_cmd)
         subprocess.run(build_cmd, shell=True, check=True)
     finally:
