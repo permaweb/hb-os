@@ -1,2 +1,3 @@
 port: 10000
 operator: unclaimed
+host_bootstrap_node: https://scheduler-1.forward.computer

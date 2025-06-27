@@ -3,7 +3,7 @@ import os
 
 config = {
     # Branches for HyperBEAM and AO.
-    "hb_branch": "origin/main",
+    "hb_branch": "edge",
     "ao_branch": "tillathehun0/cu-experimental",
 
     # Debugging and KVM.
@@ -24,7 +24,7 @@ config = {
     
     # Guest Definition.
     "host_cpu_family": "Milan",
-    "vcpu_count": 32,
+    "vcpu_count": 42,
     "guest_features": "0x1",
     "platform_info": "0x3",
     "guest_policy": "0x30000",
