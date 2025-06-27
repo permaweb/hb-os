@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 User=root
+Type=simple
 WorkingDirectory=/root/cu
 ExecStartPre=/usr/bin/npm install
 ExecStart=/usr/bin/npm run start
