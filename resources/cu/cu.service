@@ -7,6 +7,7 @@ User=root
 Type=simple
 WorkingDirectory=/root/cu
 ExecStartPre=/usr/bin/npm install
+ExecStartPre=/usr/bin/npx --yes @permaweb/wallet > /root/cu/.wallet.json
 ExecStart=/usr/bin/npm run start
 Restart=always
 
