@@ -57,10 +57,13 @@ RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.gi
 # Copy the cu.env file to the release directory
 COPY ./cu/cu.env /release/cu.env
 
-# Generate a wallet and inject it into the cu.env file
-RUN WALLET=$(npx --yes @permaweb/wallet) && \
-    cp /release/cu.env /release/cu/.env && \
-    echo "WALLET=${WALLET}" >> /release/cu/.env
+# Copy the cu.env file to the release directory
+RUN cp /release/cu.env /release/cu/.env
+
+# # Generate a wallet and inject it into the cu.env file
+# RUN WALLET=$(npx --yes @permaweb/wallet) && \
+#     cp /release/cu.env /release/cu/.env && \
+#     echo "WALLET=${WALLET}" >> /release/cu/.env
 
 # Copy CU service file to /release
 COPY ./cu/cu.service /release
