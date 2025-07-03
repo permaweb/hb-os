@@ -19,7 +19,8 @@ if [ "$USE_GPU" = "1" ]; then
     export NEEDRESTART_MODE=a
 
     echo "Installing NVIDIA CUDA repository..."
-    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+    # https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+    wget -O cuda-keyring_1.1-1_all.deb https://arweave.net/hn7zxIPhJtnJXk_1MhybRtispij3paeOrw-KWVDD19Q
 
     echo "Installing CUDA keyring..."
     sudo -E dpkg -i cuda-keyring_1.1-1_all.deb

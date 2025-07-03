@@ -61,7 +61,9 @@ def init():
 
     # Download and extract SNP release tarball.
     tarball = os.path.join(config.dir.build, "snp-release.tar.gz")
-    url = "https://github.com/apuslabs/snp-guard/releases/download/v6.9.0/snp-release.tar.gz"
+    # https://github.com/permaweb/snp-guard/releases/tag/v6.9.0
+    print("Downloading SNP release 6.9...")
+    url = "https://arweave.net/GnnSmMQlszX0lMa48KV92nX5ug-u2qiO7RxCdssxsU8" # SNP Release 6.9 
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(tarball, "wb") as f:
@@ -69,7 +71,7 @@ def init():
     run_command(f"tar -xf {tarball} -C {config.dir.build}")
     run_command(f"rm {tarball}")
     # Download the GPU admin tools
-    run_command(f"cd {config.dir.build} && git clone https://github.com/nvidia/gpu-admin-tools && cd .. ")
+    run_command(f"cd {config.dir.build} && git clone https://github.com/permaweb/gpu-admin-tools && cd .. ")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -182,6 +184,8 @@ def build_base_image():
       4. Running QEMU setup.
     """
     print("===> Building base image")
+    if config.gpu == "1":
+        setup_gpu()
     unpack_kernel()
     initramfs_build()
     create_vm()

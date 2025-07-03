@@ -393,7 +393,7 @@ else
 fi
 
 # add number of VCPUs
-[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=32"
+[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=${SMP}"
 
 # define guest memory
 add_opts "-m ${MEM}M"
