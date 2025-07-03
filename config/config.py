@@ -9,6 +9,7 @@ config = {
     # Debugging and KVM.
     "debug": "0",
     "enable_kvm": "1",
+    "gpu": "1",
     
     # Image Files.
     "base_image": "base.qcow2",
@@ -18,7 +19,7 @@ config = {
     "cmdline": "console=ttyS0 earlyprintk=serial root=/dev/sda",
     
     # QEMU Parameters.
-    "memory": "204800",
+    "memory": "32768",
     "hb_port": "80",
     "qemu_port": "4444",
     
@@ -66,6 +67,7 @@ class Config:
         # Global flag from the config dictionary.
         self.debug = config["debug"]
         self.enable_kvm = config["enable_kvm"]
+        self.gpu = config["gpu"]
 
         # Build directories and resources.
         self.dir = Directories()

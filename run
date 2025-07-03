@@ -61,13 +61,17 @@ def init():
 
     # Download and extract SNP release tarball.
     tarball = os.path.join(config.dir.build, "snp-release.tar.gz")
-    url = "https://github.com/SNPGuard/snp-guard/releases/download/v0.1.2/snp-release.tar.gz"
+    # https://github.com/permaweb/snp-guard/releases/tag/v6.9.0
+    print("Downloading SNP release 6.9...")
+    url = "https://arweave.net/GnnSmMQlszX0lMa48KV92nX5ug-u2qiO7RxCdssxsU8" # SNP Release 6.9 
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(tarball, "wb") as f:
             shutil.copyfileobj(r.raw, f)
     run_command(f"tar -xf {tarball} -C {config.dir.build}")
     run_command(f"rm {tarball}")
+    # Download the GPU admin tools
+    run_command(f"cd {config.dir.build} && git clone https://github.com/permaweb/gpu-admin-tools && cd .. ")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -119,6 +123,7 @@ def initramfs_build():
     init_script = config.initramfs_script
     initrd = config.initrd
     dockerfile = config.initramfs_dockerfile
+    target = "gpu" if config.gpu == "1" else "cpu"
 
     build_initramfs(
         kernel_dir=kernel_dir,
@@ -127,6 +132,7 @@ def initramfs_build():
         context_dir=resource_dir,
         out=initrd,
         build_dir=build_dir,
+        target=target,
     )
 
 
@@ -178,6 +184,8 @@ def build_base_image():
       4. Running QEMU setup.
     """
     print("===> Building base image")
+    if config.gpu == "1":
+        setup_gpu()
     unpack_kernel()
     initramfs_build()
     create_vm()
@@ -235,7 +243,7 @@ def run_setup():
     cmd = (
         f"sudo -E {config.qemu_launch_script} {config.qemu_default_params} {config.qemu_extra_params} "
         f"-hda {config.vm_image_base_path} -hdb {config.vm_cloud_config} "
-        f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm}"
+        f"-hb-port {config.qemu_hb_port} -qemu-port {config.qemu_port} -debug {config.debug} -enable-kvm {config.enable_kvm} -gpu {config.gpu}"
     )
     run_command(cmd)
 
@@ -485,7 +493,20 @@ def setup_host():
     """
     snp_release_dir = os.path.join(config.dir.build, "snp-release")
     run_command(f"cd {snp_release_dir} && sudo ./install.sh")
-
+def setup_gpu():
+    """
+    Setup the GPU CC for the host system and configure GPU passthrough.
+    """
+    gpu_admin_tools_dir = os.path.join(config.dir.build, "gpu-admin-tools")
+    
+    # Enable GPU CC mode
+    print("Setting up GPU Confidential Computing mode...")
+    run_command(f"cd {gpu_admin_tools_dir} && sudo python3 ./nvidia_gpu_tools.py --devices gpus --set-cc-mode=on --reset-after-cc-mode-switch")
+    
+    # Configure GPU passthrough using the dedicated script
+    print("Configuring GPU passthrough...")
+    passthrough_script = os.path.join(os.getcwd(), "scripts", "gpu_passthrough.sh")
+    run_command(f"sudo {passthrough_script} setup")
 
 def ssh_vm():
     """
@@ -581,6 +602,9 @@ def main():
     
     # Setup host command
     setup_host_parser = subparsers.add_parser("setup_host", help="Set up the host system")
+    
+    # Setup GPU command
+    setup_gpu_parser = subparsers.add_parser("setup_gpu", help="Setup the GPU CC for the host system")
     
     # Build base command
     build_base_parser = subparsers.add_parser("build_base", help="Build the base VM image")
@@ -686,6 +710,8 @@ def main():
         init()
     elif args.target == "setup_host":
         setup_host()
+    elif args.target == "setup_gpu":
+        setup_gpu()
     elif args.target == "build_base":
         build_base_image()
     elif args.target == "build_guest":

@@ -15,6 +15,7 @@ CPU_MODEL="EPYC-v4"
 MONITOR_PATH=monitor
 QEMU_CONSOLE_LOG=$(pwd)/stdout.log
 CERTS_PATH=
+USE_GPU="0"
 
 # linked to cli flag
 ENABLE_ID_BLOCK=
@@ -66,6 +67,7 @@ usage() {
     echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
     echo " -peer URL      URL of the peer VM (required for compute VM type)"
     echo " -self URL        URL of the self VM (required for compute VM type)"
+    echo " -gpu               Enable GPU passthrough and GPU driver installation"
     echo " -no-auto          Disable automatic post-start script execution"
     exit 1
 }
@@ -256,6 +258,11 @@ while [ -n "$1" ]; do
         ;;
     -no-auto)
         NO_AUTO="1"
+        shift
+        ;;
+    -gpu)
+        USE_GPU="$2"
+        shift
         ;;
     *)
         usage
@@ -386,7 +393,7 @@ else
 fi
 
 # add number of VCPUs
-[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=255"
+[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=${SMP}"
 
 # define guest memory
 add_opts "-m ${MEM}M"
@@ -405,7 +412,7 @@ if [ "${SEV_SNP}" = 1 ]; then
         add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_VARS}"
     fi
 else
-    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
+    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly=on"
     if [ -n "$UEFI_VARS" ]; then
         add_opts "-drive if=pflash,format=raw,unit=1,file=${UEFI_VARS}"
     fi
@@ -448,9 +455,28 @@ for ((i = 0; i < ${#DISKS[@]}; i++)); do
     fi
 done
 
+# add GPU passthrough parameters
+if [ "$USE_GPU" = "1" ]; then
+    NVIDIA_GPU=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
+    
+    if [ -n "$NVIDIA_GPU" ]; then
+        echo "GPU mode enabled, detected NVIDIA GPU: $NVIDIA_GPU"
+        add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
+        add_opts "-device vfio-pci,host=$NVIDIA_GPU,bus=pci.1"
+        add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+    else
+        echo "GPU mode enabled but no NVIDIA GPU detected"
+        NVIDIA_GPU=""
+    fi
+fi
+
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
-    add_opts "-machine memory-encryption=sev0,vmport=off"
+    if [ "$USE_GPU" = "1" ] && [ -n "$NVIDIA_GPU" ]; then
+        add_opts "-machine confidential-guest-support=sev0,vmport=off"
+    else
+        add_opts "-machine memory-encryption=sev0,vmport=off"
+    fi
     get_cbitpos
 
     if [[ -z "$SEV_POLICY" ]]; then
@@ -641,7 +667,7 @@ else
     sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
     # Run the setup script on the guest
-    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
+    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh '$USE_GPU'"
 fi
 
 # restore the mapping

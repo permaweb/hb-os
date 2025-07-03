@@ -102,8 +102,8 @@ boot_verity() {
     mount -t tmpfs -o size=8192M tmpfs $MNT_DIR/root
     # mount -t tmpfs -o size=8192M tmpfs $MNT_DIR/home
     mount -t tmpfs -o size=1024M tmpfs $MNT_DIR/etc
-    mount -t tmpfs -o size=2048M tmpfs $MNT_DIR/var
-    mount -t tmpfs -o size=1024M tmpfs $MNT_DIR/tmp
+    mount -t tmpfs -o size=4096M tmpfs $MNT_DIR/var
+    mount -t tmpfs -o size=2048M tmpfs $MNT_DIR/tmp
 
     # copy home, etc, var contents to RAM fs
     rsync -paxHAWXS $MNT_DIR/root_ro/ $MNT_DIR/root/
