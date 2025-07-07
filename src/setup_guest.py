@@ -411,20 +411,20 @@ def setup_guest(src_image, build_dir, out_image,
     else:
         print("Debug mode enabled. Skipping HyperBEAM service copy.")
 
-    print("Copying CU..")
-    cu_src = os.path.join(BUILD_DIR, "content", "cu")
-    cu_dst = os.path.join(DST_FOLDER, "root")
-    subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    cu_src, cu_dst], check=True)
+    # print("Copying CU..")
+    # cu_src = os.path.join(BUILD_DIR, "content", "cu")
+    # cu_dst = os.path.join(DST_FOLDER, "root")
+    # subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
+    #                 cu_src, cu_dst], check=True)
 
-    print("Copy CU service..")
-    cu_service_src = os.path.join(BUILD_DIR, "content", "cu.service")
-    cu_service_dst = os.path.join(DST_FOLDER, "etc", "systemd", "system", "cu.service")
-    subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                    cu_service_src, cu_service_dst], check=True)
+    # print("Copy CU service..")
+    # cu_service_src = os.path.join(BUILD_DIR, "content", "cu.service")
+    # cu_service_dst = os.path.join(DST_FOLDER, "etc", "systemd", "system", "cu.service")
+    # subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
+    #                 cu_service_src, cu_service_dst], check=True)
 
-    print("Enabling CU service..")
-    subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "enable", "cu.service"], check=True)
+    # print("Enabling CU service..")
+    # subprocess.run(["sudo", "chroot", DST_FOLDER, "systemctl", "enable", "cu.service"], check=True)
 
     print("Preparing output filesystem for dm-verity..")
     prepare_verity_fs()
