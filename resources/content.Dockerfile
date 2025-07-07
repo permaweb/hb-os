@@ -39,8 +39,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain stable
 
 #Install Node.js (includes npm and npx)
-RUN curl -fsSL https://deb.nodesource.com/setup_22.16.0 | sudo -E bash - && \
-    apt-get install -y nodejs && \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
+    apt-get install -y nodejs=22.16.0-1nodesource1 && \
     node -v && npm -v
 
 # Set up build directories
