@@ -541,6 +541,50 @@ if [ -n "$DATA_DISK" ]; then
     add_opts "-device scsi-hd,drive=dataDisk"
 fi
 
+# # Configure TPM passthrough if enabled
+# if [ "$ENABLE_TPM" = "1" ]; then
+#     # Security warning for SEV-SNP
+#     if [ "$SEV_SNP" = "1" ]; then
+#         echo "⚠️  WARNING: Using TPM passthrough with SEV-SNP breaks confidential computing isolation!"
+#         echo "   Hardware TPM passthrough allows host access to guest TPM operations."
+#         echo "   Consider using swtpm (software TPM) instead for true isolation."
+#         echo "   Proceeding anyway..."
+#         echo
+#     fi
+    
+#     # Prefer TPM resource manager (/dev/tpmrm0) if available, fallback to /dev/tpm0
+#     if [ "$TPM_PATH" = "/dev/tpm0" ] && [ -c "/dev/tpmrm0" ]; then
+#         TPM_PATH="/dev/tpmrm0"
+#         echo "Using TPM resource manager: $TPM_PATH"
+#     fi
+    
+#     if [ ! -c "$TPM_PATH" ]; then
+#         echo "Error: TPM device $TPM_PATH not found or not accessible"
+#         echo "Make sure the TPM device exists and you have proper permissions"
+#         usage
+#     fi
+    
+#     echo "Enabling TPM passthrough using device: $TPM_PATH"
+#     add_opts "-tpmdev passthrough,id=tpm0,path=$TPM_PATH"
+    
+#     # Use tpm-crb for TPM 2.0 with newer OVMF, otherwise tpm-tis
+#     add_opts "-device tpm-crb,tpmdev=tpm0"
+# fi
+
+# save the command line args into log file
+cat $QEMU_CMDLINE | tee ${QEMU_CONSOLE_LOG}
+echo | tee -a ${QEMU_CONSOLE_LOG}
+
+#touch /tmp/events
+#add_opts "-trace events=/tmp/events"
+
+echo "Disabling transparent huge pages"
+echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+
+# map CTRL-C to CTRL ]
+echo "Mapping CTRL-C to CTRL-]"
+stty intr ^]
+
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
     echo "Launching QEMU as a background service..."

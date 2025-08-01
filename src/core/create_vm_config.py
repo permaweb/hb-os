@@ -2,9 +2,11 @@ import glob
 import os
 import re
 import shutil
-import subprocess
+from typing import Optional, Dict, Any
+from src.utils import run_command
 
-def create_vm_config_file(out_path, ovmf_path, kernel_path, initrd_path, kernel_cmdline, vm_config):
+def create_vm_config_file(out_path: str, ovmf_path: str, kernel_path: str, initrd_path: str, 
+                         kernel_cmdline: str, vm_config: Dict[str, Any]) -> None:
     """
     Creates a new VM configuration file in the following format (without comments):
 
@@ -62,8 +64,9 @@ def create_vm_config_file(out_path, ovmf_path, kernel_path, initrd_path, kernel_
         if match:
             cmd_str = match.group(1)
             try:
-                output = subprocess.check_output(cmd_str, shell=True, universal_newlines=True).strip()
-            except subprocess.CalledProcessError as e:
+                result = run_command(cmd_str, capture_output=True)
+                output = result.stdout.strip() if result.stdout else ""
+            except Exception as e:
                 output = ""
                 print(f"Warning: command '{cmd_str}' failed with error: {e}")
             kernel_cmdline = re.sub(r"verity_roothash='[^']+'",
@@ -85,11 +88,12 @@ def create_vm_config_file(out_path, ovmf_path, kernel_path, initrd_path, kernel_
         f.write(f'image_id = "{vm_config.get("image_id", "00000000000000000000000000000000")}"\n')
         f.write("[min_commited_tcb]\n")
         
-        tcb = vm_config.get("min_commited_tcb", {})
+        tcb = vm_config.get("min_committed_tcb", {})
         f.write(f"bootloader = {tcb.get('bootloader', 4)}\n")
         f.write(f"tee = {tcb.get('tee', 0)}\n")
         f.write(f"snp = {tcb.get('snp', 22)}\n")
         f.write(f"microcode = {tcb.get('microcode', 213)}\n")
-        f.write(f"_reserved = {tcb.get('_reserved', [0, 0, 0, 0])}\n")
+        reserved_list = tcb.get('_reserved', [0, 0, 0, 0])
+        f.write(f"_reserved = {reserved_list}\n")
     
     print(f"Written config to {out_path}")

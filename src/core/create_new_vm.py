@@ -7,9 +7,12 @@ import getpass
 import tempfile
 import re
 import crypt
+from typing import Optional
 from pathlib import Path
+from src.utils import ensure_directory, run_command
 
-def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey_path=None, server_privkey=None):
+def create_vm_image(new_vm: str, build_dir: str, template_user_data: str, size: int = 20, 
+                   owner_pubkey_path: Optional[str] = None, server_privkey: Optional[str] = None) -> None:
     """
     Create a new VM disk image based on the Ubuntu cloud image and build a cloud-init config blob.
     
@@ -29,7 +32,7 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
 
     # Resolve and create the build directory.
     build_dir = os.path.realpath(build_dir)
-    os.makedirs(build_dir, exist_ok=True)
+    ensure_directory(build_dir)
     if not os.path.isdir(build_dir):
         raise ValueError(f"Invalid build directory: {build_dir}")
 
@@ -40,7 +43,7 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
     # Download the base image if it does not exist.
     if not os.path.exists(base_disk):
         print(f"Downloading base image to {base_disk} …")
-        subprocess.run(f"wget -O {base_disk} {base_image_url}", shell=True, check=True)
+        run_command(f"wget -O {base_disk} {base_image_url}")
     else:
         print(f"Base image {base_disk} already exists.")
 
@@ -54,17 +57,17 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
 
     # Resize the new VM disk image using qemu-img.
     print(f"Resizing {new_vm_path} to {size}G …")
-    subprocess.run(f"qemu-img resize {new_vm_path} {size}G", shell=True, check=True)
+    run_command(f"qemu-img resize {new_vm_path} {size}G")
 
     # Prepare the keys directory.
     keys_path = os.path.join(build_dir, "keys")
-    os.makedirs(keys_path, exist_ok=True)
+    ensure_directory(keys_path)
 
     # Generate owner key pair if not provided.
     if not owner_pubkey_path:
         default_owner_key = os.path.join(keys_path, "ssh-key-vm-owner")
         print(f"No owner public SSH key provided. Generating a new keypair at {default_owner_key} …")
-        subprocess.run(f"ssh-keygen -t ed25519 -N '' -f {default_owner_key}", shell=True, check=True)
+        run_command(f"ssh-keygen -t ed25519 -N '' -f {default_owner_key}")
         owner_pubkey_path = default_owner_key + ".pub"
     else:
         owner_pubkey_path = os.path.realpath(owner_pubkey_path)
@@ -73,7 +76,7 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
     if not server_privkey:
         default_server_key = os.path.join(keys_path, "ssh-server-key-vm")
         print(f"No server SSH key provided. Generating a new keypair at {default_server_key} …")
-        subprocess.run(f"ssh-keygen -t ecdsa -N '' -f {default_server_key}", shell=True, check=True)
+        run_command(f"ssh-keygen -t ecdsa -N '' -f {default_server_key}")
         server_privkey = default_server_key
         server_pubkey = default_server_key + ".pub"
     else:
@@ -93,7 +96,7 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
 
     # Create cloud-init configuration.
     config_path = os.path.join(build_dir, "config")
-    os.makedirs(config_path, exist_ok=True)
+    ensure_directory(config_path)
     user_data_path = os.path.join(config_path, "user-data")
 
     # Determine the directory of this script (assumes the template is here).
@@ -161,6 +164,6 @@ def create_vm_image(new_vm, build_dir, template_user_data, size=20, owner_pubkey
         f"{user_data_path} {meta_data_path} {network_config_path}"
     )
     print("Creating config blob …")
-    subprocess.run(geniso_cmd, shell=True, check=True)
+    run_command(geniso_cmd)
     print(f"Config blob written to {out_cfg_blob}")
 
