@@ -31,8 +31,27 @@ def unpack_kernel() -> None:
     """
     Unpack the kernel package from a .deb file.
     """
+    import glob
+    
     kernel_dir = config.dir.kernel
-    kernel_deb = config.kernel_deb
+    kernel_deb_pattern = config.kernel_deb
+    
+    # Find all matching .deb files
+    deb_files = glob.glob(kernel_deb_pattern)
+    
+    # Filter out debug packages (contain -dbg)
+    main_deb_files = [f for f in deb_files if '-dbg' not in f]
+    
+    if not main_deb_files:
+        raise RuntimeError(f"No kernel .deb files found matching: {kernel_deb_pattern}")
+    
+    if len(main_deb_files) > 1:
+        print(f"Warning: Multiple kernel packages found: {main_deb_files}")
+        print(f"Using the first one: {main_deb_files[0]}")
+    
+    kernel_deb = main_deb_files[0]
+    print(f"Unpacking kernel from: {kernel_deb}")
+    
     run_command(f"rm -rf {kernel_dir}")
     run_command(f"dpkg -x {kernel_deb} {kernel_dir}")
 
@@ -161,9 +180,7 @@ def run_setup() -> None:
            .hdb(config.vm_cloud_config)
            .hb_port(config.qemu_hb_port)
            .qemu_port(config.qemu_port)
-           .debug(config.debug)
            .enable_kvm(config.enable_kvm)
-           .enable_tpm(config.enable_tpm)
            .build())
     
     run_command(cmd)

@@ -10,4 +10,5 @@ from .initialization import *
 from .service_factory import *
 from .service_interfaces import *
 from .setup_guest import *
+from .snp_builder import *
 from .vm_manager import *

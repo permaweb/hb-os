@@ -13,13 +13,16 @@ from src.services import install_dependencies
 from src.utils import run_command, ensure_directory
 
 
-def init() -> None:
+def init(snp_release_path: Optional[str] = None) -> None:
     """
     Initialize the build environment:
       - Create necessary directories.
       - Install dependencies.
-      - Download and extract SNP release.
+      - Download and extract SNP release (or use provided path).
       - Build attestation server and digest calculator.
+      
+    Args:
+        snp_release_path: Optional path to pre-built SNP release directory or tarball
     """
 
     # Go thru all config.dir and create the directories if they don't exist
@@ -30,15 +33,39 @@ def init() -> None:
     # Install dependencies.
     install_dependencies(force=False)
 
-    # Download and extract SNP release tarball.
-    tarball = os.path.join(config.dir.build, "snp-release.tar.gz")
-    url = "https://github.com/SNPGuard/snp-guard/releases/download/v0.1.2/snp-release.tar.gz"
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(tarball, "wb") as f:
-            shutil.copyfileobj(r.raw, f)
-    run_command(f"tar -xf {tarball} -C {config.dir.build}")
-    run_command(f"rm {tarball}")
+    # Handle SNP release - either use provided path or download default
+    if snp_release_path:
+        print(f"Using provided SNP release: {snp_release_path}")
+        
+        if os.path.isfile(snp_release_path) and snp_release_path.endswith('.tar.gz'):
+            # Extract provided tarball
+            print("Extracting provided SNP release tarball...")
+            run_command(f"tar -xf {snp_release_path} -C {config.dir.build}")
+        elif os.path.isdir(snp_release_path):
+            # Copy provided directory
+            print("Copying provided SNP release directory...")
+            import shutil
+            dest_dir = os.path.join(config.dir.build, "snp-release")
+            if os.path.exists(dest_dir):
+                shutil.rmtree(dest_dir)
+            shutil.copytree(snp_release_path, dest_dir)
+        else:
+            raise ValueError(f"Invalid SNP release path: {snp_release_path}")
+    else:
+        # Download and extract default SNP release tarball.
+        tarball = os.path.join(config.dir.build, "snp-release.tar.gz")
+        # https://github.com/permaweb/snp-guard/releases/tag/v6.9.0
+        print("Downloading SNP release 6.9...")
+        url = "https://arweave.net/GnnSmMQlszX0lMa48KV92nX5ug-u2qiO7RxCdssxsU8" # SNP Release 6.9 
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(tarball, "wb") as f:
+                shutil.copyfileobj(r.raw, f)
+        run_command(f"tar -xf {tarball} -C {config.dir.build}")
+        run_command(f"rm {tarball}")
+    
+    # Download the GPU admin tools
+    run_command(f"cd {config.dir.build} && git clone https://github.com/permaweb/gpu-admin-tools && cd .. ")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -65,3 +92,18 @@ def setup_host() -> None:
     """
     snp_release_dir = os.path.join(config.dir.build, "snp-release")
     run_command(f"cd {snp_release_dir} && sudo ./install.sh")
+
+def setup_gpu() -> None:
+    """
+    Setup the GPU CC for the host system and configure GPU passthrough.
+    """
+    gpu_admin_tools_dir = os.path.join(config.dir.build, "gpu-admin-tools")
+
+    # Enable GPU CC mode
+    print("Setting up GPU Confidential Computing mode...")
+    run_command(f"cd {gpu_admin_tools_dir} && sudo python3 ./nvidia_gpu_tools.py --devices gpus --set-cc-mode=on --reset-after-cc-mode-switch")
+
+    # Configure GPU passthrough using the dedicated script
+    print("Configuring GPU passthrough...")
+    passthrough_script = os.path.join(os.getcwd(), "scripts", "gpu_passthrough.sh")
+    run_command(f"sudo {passthrough_script} setup")

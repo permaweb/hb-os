@@ -5,3 +5,4 @@ from .dependencies import *
 from .docker_service import *
 from .filesystem_service import *
 from .release_manager import *
+from .snp_component_service import *

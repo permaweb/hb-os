@@ -47,28 +47,29 @@ def prepare_initramfs_directories(build_dir: str) -> str:
     return initrd_dir
 
 
-def build_and_export_container(dockerfile: str, context_dir: str) -> str:
+def build_and_export_container(dockerfile: str, context_dir: str, target: str = "cpu") -> str:
     """
     Build Docker image and export container filesystem.
     
     Args:
         dockerfile: Path to the Dockerfile
         context_dir: Build context directory
+        target: Build target, either "cpu" or "gpu" (default: "cpu")
         
     Returns:
         Container name for further processing
     """
     docker_img = "nano-vm-rootfs"
     container_name = "nano-vm-rootfs"
-    print("Building Docker image..")
+    print(f"Building Docker image for target: {target}")
 
     # If dockerfile is a file (i.e. a Dockerfile), use its parent as context.
     if os.path.isfile(dockerfile):
         context_dir = os.path.dirname(dockerfile)
         dockerfile_arg = os.path.basename(dockerfile)
 
-    # Build Docker image using Docker service
-    docker_service.build_image(context_dir, dockerfile_arg, docker_img)
+    # Build Docker image using Docker service with target
+    docker_service.build_image(context_dir, dockerfile_arg, docker_img, target=target)
 
     # Run container
     container = docker_service.run_container(docker_img, container_name)
@@ -168,7 +169,7 @@ def create_initramfs_archive(initrd_dir: str, output_path: str) -> None:
 
 
 def build_initramfs(kernel_dir: str, init_script: str, dockerfile: str, context_dir: str, 
-                   build_dir: str, init_patch: Optional[str] = None, out: Optional[str] = None) -> None:
+                   build_dir: str, init_patch: Optional[str] = None, out: Optional[str] = None, target: str = "cpu") -> None:
     """
     Build an initramfs image by exporting a Docker container filesystem,
     copying kernel modules, binaries, and an init script (optionally patching it),
@@ -192,6 +193,7 @@ def build_initramfs(kernel_dir: str, init_script: str, dockerfile: str, context_
       init_patch (str, optional): Path to a patch file for the init script. If provided and exists, it is applied.
       out (str, optional): Output file path for the generated initramfs image.
                            Defaults to "<build_dir>/initramfs.cpio.gz".
+      target (str, optional): Build target, either "cpu" or "gpu" (default: "cpu").
                            
     Raises:
         ValueError: If required input paths are invalid
@@ -221,7 +223,7 @@ def build_initramfs(kernel_dir: str, init_script: str, dockerfile: str, context_
     initrd_dir = prepare_initramfs_directories(build_dir)
 
     # Step 3: Build and export Docker container
-    container_name = build_and_export_container(dockerfile, context_dir)
+    container_name = build_and_export_container(dockerfile, context_dir, target)
 
     try:
         # Export the container's filesystem into initrd_dir
@@ -255,6 +257,7 @@ if __name__ == "__main__":
     parser.add_argument("--build-dir", default="build", help="Build directory")
     parser.add_argument("--init-patch", help="Path to init script patch")
     parser.add_argument("--out", help="Output path for initramfs")
+    parser.add_argument("--target", default="cpu", help="Build target: cpu or gpu (default: cpu)")
     
     args = parser.parse_args()
     
@@ -265,5 +268,6 @@ if __name__ == "__main__":
         args.context_dir or os.path.dirname(args.dockerfile),
         args.build_dir, 
         args.init_patch, 
-        args.out
+        args.out,
+        args.target
     )

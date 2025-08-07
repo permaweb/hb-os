@@ -15,10 +15,13 @@ CPU_MODEL="EPYC-v4"
 MONITOR_PATH=monitor
 QEMU_CONSOLE_LOG=$(pwd)/stdout.log
 CERTS_PATH=
+USE_GPU="0"
+ENABLE_TPM="0"
+TPM_PATH="/dev/tpm0"
+CLEAR_TPM="1"
 
 # linked to cli flag
 ENABLE_ID_BLOCK=
-NO_AUTO="0"
 
 SEV="0"
 SEV_ES="0"
@@ -64,9 +67,9 @@ usage() {
     echo " -qemu-port                 Port for QEMU monitor (default: 4444)"
     echo " -debug                     Enable debug mode"
     echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
-    echo " -peer URL      URL of the peer VM (required for compute VM type)"
-    echo " -self URL        URL of the self VM (required for compute VM type)"
-    echo " -no-auto          Disable automatic post-start script execution"
+    echo " -gpu               Enable GPU passthrough and GPU driver installation"
+    echo " -enable-tpm        Enable TPM passthrough (default: disabled)"
+    echo " -clear-tpm         Clear TPM ownership before starting (requires tpm2-tools)"
     exit 1
 }
 
@@ -246,16 +249,16 @@ while [ -n "$1" ]; do
         DATA_DISK="$2"
         shift
         ;;
-    -peer)
-        PEER="$2"
+    -gpu)
+        USE_GPU="$2"
         shift
         ;;
-    -self)
-        SELF="$2"
+    -enable-tpm)
+        ENABLE_TPM="$2"
         shift
         ;;
-    -no-auto)
-        NO_AUTO="1"
+    -clear-tpm)
+        CLEAR_TPM="1"
         ;;
     *)
         usage
@@ -386,7 +389,7 @@ else
 fi
 
 # add number of VCPUs
-[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=255"
+[ -n "${SMP}" ] && add_opts "-smp ${SMP},maxcpus=${SMP}"
 
 # define guest memory
 add_opts "-m ${MEM}M"
@@ -405,7 +408,7 @@ if [ "${SEV_SNP}" = 1 ]; then
         add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_VARS}"
     fi
 else
-    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly"
+    add_opts "-drive if=pflash,format=raw,unit=0,file=${UEFI_CODE},readonly=on"
     if [ -n "$UEFI_VARS" ]; then
         add_opts "-drive if=pflash,format=raw,unit=1,file=${UEFI_VARS}"
     fi
@@ -448,9 +451,28 @@ for ((i = 0; i < ${#DISKS[@]}; i++)); do
     fi
 done
 
+# add GPU passthrough parameters
+if [ "$USE_GPU" = "1" ]; then
+    NVIDIA_GPU=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
+
+    if [ -n "$NVIDIA_GPU" ]; then
+        echo "GPU mode enabled, detected NVIDIA GPU: $NVIDIA_GPU"
+        add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
+        add_opts "-device vfio-pci,host=$NVIDIA_GPU,bus=pci.1"
+        add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+    else
+        echo "GPU mode enabled but no NVIDIA GPU detected"
+        NVIDIA_GPU=""
+    fi
+fi
+
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
-    add_opts "-machine memory-encryption=sev0,vmport=off"
+    if [ "$USE_GPU" = "1" ] && [ -n "$NVIDIA_GPU" ]; then
+        add_opts "-machine confidential-guest-support=sev0,vmport=off"
+    else
+        add_opts "-machine memory-encryption=sev0,vmport=off"
+    fi
     get_cbitpos
 
     if [[ -z "$SEV_POLICY" ]]; then
@@ -514,20 +536,6 @@ add_opts "-monitor pty -monitor unix:${MONITOR_PATH},server,nowait"
 
 add_opts "-qmp tcp:localhost:${QEMU_PORT},server,wait=off"
 
-# save the command line args into log file
-cat $QEMU_CMDLINE | tee ${QEMU_CONSOLE_LOG}
-echo | tee -a ${QEMU_CONSOLE_LOG}
-
-#touch /tmp/events
-#add_opts "-trace events=/tmp/events"
-
-echo "Disabling transparent huge pages"
-echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
-
-# map CTRL-C to CTRL ]
-echo "Mapping CTRL-C to CTRL-]"
-stty intr ^]
-
 # Process the DATA_DISK if set (new disk for external data storage)
 if [ -n "$DATA_DISK" ]; then
     TMP="$DATA_DISK"
@@ -541,35 +549,75 @@ if [ -n "$DATA_DISK" ]; then
     add_opts "-device scsi-hd,drive=dataDisk"
 fi
 
-# # Configure TPM passthrough if enabled
-# if [ "$ENABLE_TPM" = "1" ]; then
-#     # Security warning for SEV-SNP
-#     if [ "$SEV_SNP" = "1" ]; then
-#         echo "⚠️  WARNING: Using TPM passthrough with SEV-SNP breaks confidential computing isolation!"
-#         echo "   Hardware TPM passthrough allows host access to guest TPM operations."
-#         echo "   Consider using swtpm (software TPM) instead for true isolation."
-#         echo "   Proceeding anyway..."
-#         echo
-#     fi
+echo "ENABLE_TPM: $ENABLE_TPM"
+echo "SEV_SNP: $SEV_SNP"
+echo "TPM_PATH: $TPM_PATH"
+
+# Configure TPM passthrough if enabled
+if [ ${ENABLE_TPM} = "1" ]; then
+    # Clear TPM ownership if requested
+    if [ ${CLEAR_TPM} = "1" ]; then
+        echo "Clearing TPM ownership to resolve hierarchy conflicts..."
+        if command -v tpm2_clear >/dev/null 2>&1; then
+            # Clear TPM using tpm2-tools
+            tpm2_clear -T device:${TPM_PATH} || echo "Warning: TPM clear failed, continuing anyway..."
+        else
+            echo "Warning: tpm2-tools not found. Install with: sudo apt install tpm2-tools"
+        fi
+    fi
+    # Security warning for SEV-SNP
+    if [ ${SEV_SNP} = "1" ]; then
+        echo "⚠️  WARNING: Using TPM passthrough with SEV-SNP breaks confidential computing isolation!"
+        echo "   Hardware TPM passthrough allows host access to guest TPM operations."
+        echo "   Consider using swtpm (software TPM) instead for true isolation."
+        echo "   Proceeding anyway..."
+        echo
+    fi
     
-#     # Prefer TPM resource manager (/dev/tpmrm0) if available, fallback to /dev/tpm0
-#     if [ "$TPM_PATH" = "/dev/tpm0" ] && [ -c "/dev/tpmrm0" ]; then
-#         TPM_PATH="/dev/tpmrm0"
-#         echo "Using TPM resource manager: $TPM_PATH"
-#     fi
+    # Use direct TPM device to avoid cancel path issues with resource manager
+    echo "Using direct TPM device: $TPM_PATH"
     
-#     if [ ! -c "$TPM_PATH" ]; then
-#         echo "Error: TPM device $TPM_PATH not found or not accessible"
-#         echo "Make sure the TPM device exists and you have proper permissions"
-#         usage
-#     fi
+    if [ ! -c ${TPM_PATH} ]; then
+        echo "Error: TPM device $TPM_PATH not found or not accessible"
+        echo "Make sure the TPM device exists and you have proper permissions"
+        echo ""
+        echo "Troubleshooting steps:"
+        echo "1. Check if TPM is enabled in BIOS/UEFI"
+        echo "2. Check if TPM kernel modules are loaded: lsmod | grep tpm"
+        echo "3. Check TPM device permissions: ls -la /dev/tpm*"
+        echo "4. Add user to tss group: sudo usermod -a -G tss \$USER"
+        echo "5. Try alternative TPM paths: /dev/tpmrm0"
+        usage
+    fi
     
-#     echo "Enabling TPM passthrough using device: $TPM_PATH"
-#     add_opts "-tpmdev passthrough,id=tpm0,path=$TPM_PATH"
+    # Check TPM permissions
+    if [ ! -r ${TPM_PATH} ] || [ ! -w ${TPM_PATH} ]; then
+        echo "Warning: Limited permissions on TPM device $TPM_PATH"
+        echo "Current permissions: $(ls -la ${TPM_PATH})"
+        echo "Consider running: sudo chmod 666 ${TPM_PATH} or adding user to tss group"
+    fi
     
-#     # Use tpm-crb for TPM 2.0 with newer OVMF, otherwise tpm-tis
-#     add_opts "-device tpm-crb,tpmdev=tpm0"
-# fi
+    echo "Enabling TPM passthrough using device: $TPM_PATH"
+    
+    # Check if TPM cancel path exists, create dummy one if not
+    CANCEL_PATH=""
+    if [ -f "/sys/class/tpm/tpm0/device/cancel" ]; then
+        CANCEL_PATH="/sys/class/tpm/tpm0/device/cancel"
+        echo "Using system TPM cancel path: $CANCEL_PATH"
+    else
+        # Create dummy cancel path
+        mkdir -p ./build/tpm0
+        touch ./build/tpm0/cancel
+        CANCEL_PATH="$(pwd)/build/tpm0/cancel"
+        echo "Created dummy TPM cancel path: $CANCEL_PATH"
+    fi
+    
+    add_opts "-tpmdev passthrough,id=tpm0,path=$TPM_PATH,cancel-path=$CANCEL_PATH"
+    
+    # Use tpm-crb for better TPM 2.0 compatibility instead of tpm-tis
+    # Add performance optimizations to reduce TPM command overhead
+    add_opts "-device tpm-crb,tpmdev=tpm0"
+fi
 
 # save the command line args into log file
 cat $QEMU_CMDLINE | tee ${QEMU_CONSOLE_LOG}
@@ -584,6 +632,7 @@ echo "never" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 # map CTRL-C to CTRL ]
 echo "Mapping CTRL-C to CTRL-]"
 stty intr ^]
+
 
 # if the TOML_CONFIG file is present and DEBUG = 0, then run QEMU as a background service
 if [ -n "$TOML_CONFIG" ]; then
@@ -624,19 +673,7 @@ if [ -n "$TOML_CONFIG" ]; then
 
         echo "Server is ready on port ${HB_PORT}"
 
-        # Check if required parameters are set before calling post_start.py
-        if [ -n "$JSON_FILE" ] && [ -n "$SELF" ] && [ "$NO_AUTO" = "0" ]; then
-            echo "Running post-start script with --inputs=$JSON_FILE, --self=$SELF, --peer=$PEER"
-            python3 ./scripts/post_start.py --inputs "$JSON_FILE" --self "$SELF" ${PEER:+--peer "$PEER"}
-        elif [ "$NO_AUTO" = "1" ]; then
-            echo "Skipping post-start script execution due to --no-auto flag."
-        else
-            echo "Error: Missing required parameters for post-start script."
-            echo "Inputs=${JSON_FILE:-'not set'}"
-            echo "Self=${SELF:-'not set'}"
-            echo "Peer=${PEER:-'not set'}"
-            echo "Skipping post-start script execution."
-        fi
+
 
     fi
 
@@ -685,7 +722,7 @@ else
     sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
     # Run the setup script on the guest
-    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh"
+    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh '$USE_GPU'"
 fi
 
 # restore the mapping

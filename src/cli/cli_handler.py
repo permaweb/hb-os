@@ -4,11 +4,12 @@ CLI handling functionality moved from the run script.
 Contains the exact same functions without modifications.
 """
 
+import os
 import sys
 import argparse
 from typing import Optional, NoReturn
 from config import config
-from src.core import init, setup_host, build_base_image, build_guest_image, start_vm, start_release_vm, ssh_vm, build_snp_packages
+from src.core import init, setup_host, setup_gpu, build_snp_packages, build_base_image, build_guest_image, start_vm, start_release_vm, ssh_vm
 from src.services import package_release, download_release, clean
 from src.utils import HyperBeamError
 
@@ -27,10 +28,10 @@ USAGE:
 
 COMMANDS:
   init                Initialize the build environment (install dependencies, download SNP release)
-  setup_host          Set up the host system using the SNP release installer
-  build_snp_packages  Build SNP packages (kernel, OVMF, QEMU) from source
     Options:
-      --amdsev PATH          Use local AMDSEV repository path (optional)
+      --snp-release PATH     Use pre-built SNP release directory or tarball (optional)
+  setup_host          Set up the host system using the SNP release installer
+  build_snp_release   Build SNP release package (kernel, OVMF, QEMU) from source
   build_base          Build the base VM image (unpack kernel, build initramfs, create VM)
   
   build_guest         Build the guest image (build content, set up verity, create VM config)
@@ -58,8 +59,8 @@ COMMANDS:
 
 EXAMPLES:
   ./run init
-  ./run build_snp_packages
-  ./run build_snp_packages --amdsev /path/to/local/amdsev
+  ./run init --snp-release /path/to/snp-release.tar.gz
+  ./run build_snp_release
   ./run build_base
   ./run build_guest --hb-branch main --ao-branch v1.0
   ./run start --data-disk /path/to/disk.img
@@ -89,17 +90,20 @@ def create_argument_parser() -> argparse.ArgumentParser:
     
     # Init command
     init_parser = subparsers.add_parser("init", help="Initialize the build environment")
+    init_parser.add_argument(
+        "--snp-release",
+        metavar="PATH",
+        help="Path to pre-built SNP release directory or tarball (optional)"
+    )
     
     # Setup host command
     setup_host_parser = subparsers.add_parser("setup_host", help="Set up the host system")
+
+    # Setup GPU command
+    setup_gpu_parser = subparsers.add_parser("setup_gpu", help="Setup the GPU CC for the host system")
     
-    # Build SNP packages command
-    build_snp_parser = subparsers.add_parser("build_snp_packages", help="Build SNP packages from source")
-    build_snp_parser.add_argument(
-        "--amdsev",
-        metavar="PATH",
-        help="Use local AMDSEV repository path (optional)"
-    )
+    # Build SNP release command
+    build_snp_release_parser = subparsers.add_parser("build_snp_release", help="Build SNP release package from source")
     
     # Build base command
     build_base_parser = subparsers.add_parser("build_base", help="Build the base VM image")
@@ -224,11 +228,13 @@ def dispatch_command(args: argparse.Namespace) -> None:
     
     # For now, using legacy functions that delegate to the DI system internally:
     if args.target == "init":
-        init()
+        init(args.snp_release)
     elif args.target == "setup_host":
         setup_host()
-    elif args.target == "build_snp_packages":
-        build_snp_packages(config, args.amdsev)
+    elif args.target == "setup_gpu":
+        setup_gpu()
+    elif args.target == "build_snp_release":
+        build_snp_packages(config)
     elif args.target == "build_base":
         build_base_image()
     elif args.target == "build_guest":

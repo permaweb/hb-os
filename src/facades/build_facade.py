@@ -187,8 +187,27 @@ class BuildFacade(IBuildFacade):
     
     def _unpack_kernel(self) -> None:
         """Unpack the kernel package from a .deb file."""
+        import glob
+        
         kernel_dir = self._config.kernel_dir
-        kernel_deb = self._config.config.kernel_deb
+        kernel_deb_pattern = self._config.config.kernel_deb
+        
+        # Find all matching .deb files
+        deb_files = glob.glob(kernel_deb_pattern)
+        
+        # Filter out debug packages (contain -dbg)
+        main_deb_files = [f for f in deb_files if '-dbg' not in f]
+        
+        if not main_deb_files:
+            raise RuntimeError(f"No kernel .deb files found matching: {kernel_deb_pattern}")
+        
+        if len(main_deb_files) > 1:
+            print(f"Warning: Multiple kernel packages found: {main_deb_files}")
+            print(f"Using the first one: {main_deb_files[0]}")
+        
+        kernel_deb = main_deb_files[0]
+        print(f"Unpacking kernel from: {kernel_deb}")
+        
         self._command.run_command(f"rm -rf {kernel_dir}")
         self._command.run_command(f"dpkg -x {kernel_deb} {kernel_dir}")
     

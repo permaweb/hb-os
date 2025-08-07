@@ -38,7 +38,8 @@ class DockerService(IDockerService):
         self._running_containers = set()
     
     def build_image(self, context_dir: Union[str, Path], dockerfile_name: str, 
-                   image_name: str, build_args: Optional[Dict[str, str]] = None) -> str:
+                   image_name: str, build_args: Optional[Dict[str, str]] = None,
+                   target: Optional[str] = None) -> str:
         """
         Build a Docker image with proper error handling.
         
@@ -47,6 +48,7 @@ class DockerService(IDockerService):
             dockerfile_name: Name of the Dockerfile
             image_name: Name to tag the built image
             build_args: Build arguments to pass to Docker
+            target: Target stage for multi-stage builds (optional)
         
         Returns:
             str: The image name that was built
@@ -69,6 +71,10 @@ class DockerService(IDockerService):
         print(f"Building Docker image: {image_name}")
         
         cmd = ["docker", "build", "-t", image_name]
+        
+        # Add target stage if provided
+        if target:
+            cmd.extend(["--target", target])
         
         # Add build arguments if provided
         if build_args:

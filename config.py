@@ -25,6 +25,7 @@ class DirectoryConfig:
     kernel: str = field(init=False)
     verity: str = field(init=False)
     snp: str = field(init=False)
+    snp_package: str = field(init=False)
     resources: str = field(init=False)
     scripts: str = field(init=False)
     config: str = field(init=False)
@@ -39,6 +40,7 @@ class DirectoryConfig:
         self.kernel = os.path.join(self.build, "kernel")
         self.verity = os.path.join(self.build, "verity")
         self.snp = os.path.join(self.build, "snp-release")
+        self.snp_package =  os.path.join(self.build, "SNP_PACKAGE")
         self.resources = os.path.realpath("resources")
         self.scripts = os.path.realpath("scripts")
         self.config = os.path.realpath("config")
@@ -67,9 +69,10 @@ class VMConfig:
     """Virtual machine configuration settings."""
     
     # VM Hardware Configuration
-    host_cpu_family: str = "Milan"
-    vcpu_count: int = 42
-    memory_mb: int = 204800  # Changed from string to int
+    host_cpu_family: str = "Genoa"
+    vcpu_count: int = 12
+    memory_mb: int = 204800
+    gpu: bool = False  # Enable GPU support
     
     # SEV-SNP Guest Policy Settings
     guest_features: str = "0x1"
@@ -86,10 +89,10 @@ class VMConfig:
 class TCBConfig:
     """Trusted Computing Base (TCB) configuration."""
     
-    bootloader: int = 4
+    bootloader: int = 9
     tee: int = 0
     snp: int = 22
-    microcode: int = 213
+    microcode: int = 72
     reserved: List[int] = field(default_factory=lambda: [0, 0, 0, 0])
 
 
@@ -98,10 +101,10 @@ class NetworkConfig:
     """Network and SSH configuration."""
     
     vm_host: str = "localhost"
-    vm_port: int = 2222  # Changed from string to int
+    vm_port: int = 2222
     vm_user: str = "ubuntu"
-    hb_port: int = 80  # Changed from string to int
-    qemu_port: int = 4444  # Changed from string to int
+    hb_port: int = 80
+    qemu_port: int = 4444
 
 
 @dataclass
@@ -276,6 +279,11 @@ class HyperBeamConfig:
     def enable_tpm(self) -> str:
         """TPM enable flag as string (for backward compatibility)."""
         return "1" if self.build.enable_tpm else "0"
+    
+    @property
+    def gpu(self) -> str:
+        """GPU enable flag as string (for backward compatibility)."""
+        return "1" if self.vm.gpu else "0"
     
     @property
     def vcpu_count(self) -> int:
