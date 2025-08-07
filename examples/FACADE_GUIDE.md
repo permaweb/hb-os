@@ -12,7 +12,7 @@ The facade system consists of several layers:
 
 ## Available Facades
 
-### 🔧 ISetupFacade
+### ISetupFacade
 Handles environment setup and initialization.
 
 ```python
@@ -21,7 +21,7 @@ setup_facade.setup_host_system()
 setup_facade.verify_environment()
 ```
 
-### 🏗️ IBuildFacade  
+### IBuildFacade  
 Manages build operations and orchestration.
 
 ```python
@@ -32,7 +32,7 @@ build_facade.build_guest_image(hb_branch="main")
 build_facade.get_build_status()
 ```
 
-### 🚀 IVMFacade
+### IVMFacade
 Simplifies VM lifecycle management.
 
 ```python
@@ -44,7 +44,7 @@ vm_facade.connect_to_vm()
 vm_facade.get_vm_status()
 ```
 
-### 📦 IReleaseFacade
+### IReleaseFacade
 Handles release management operations.
 
 ```python
@@ -54,7 +54,7 @@ release_facade.clean_build_artifacts(keep_downloads=True)
 release_facade.list_available_releases()
 ```
 
-### 🎭 IHyperBeamFacade (Main Facade)
+### IHyperBeamFacade (Main Facade)
 Provides complete workflows for common use cases.
 
 ```python
@@ -140,27 +140,27 @@ else:
 
 ## Benefits of the Facade System
 
-### 🎯 **Simplified APIs**
+### **Simplified APIs**
 - Complex multi-step operations become single method calls
 - Intelligent defaults reduce configuration complexity
 - Clear, intuitive method names
 
-### 🔧 **Error Handling**
+### **Error Handling**
 - Comprehensive error messages with troubleshooting hints
 - Validation of prerequisites before operations
 - Graceful failure recovery suggestions
 
-### 🧪 **Testing & Mocking**
+### **Testing & Mocking**
 - Interface-based design enables easy mocking
 - Individual facades can be tested in isolation
 - Dependency injection simplifies test setup
 
-### 📈 **Maintainability**
+### **Maintainability**
 - Clear separation of concerns
 - Easy to extend with new workflows
 - Backward compatible with existing code
 
-### 🚀 **Performance**
+### **Performance**
 - Intelligent caching and status checking
 - Avoids redundant operations
 - Optimized workflow orchestration

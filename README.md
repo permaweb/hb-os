@@ -636,19 +636,20 @@ HyperBEAM OS provides a command-line interface for all operations:
 
 #### **Development Workflow**
 ```bash
-# Initialize environment (once)
-./run init
+
+# Prerequisits: you have already ran ./run init and ./run build_base
+# Set debug = True (config.py)
 
 # Development cycle
 ./run build_guest --hb-branch feature-branch
-./run start --data-disk /path/to/dev-disk.img
-./run ssh  # Connect to test your changes
+./run start --data-disk /path/to/dev-disk.img # (Optional: --data-disk for non vol storage)
+ssh -p 2222 root@localhost  # Connect to test your changes (password: hb)
 ```
 
 #### **Release Workflow**
 ```bash
 # Build complete system for release
-./run build_snp_release  # If building from source
+./run build_snp_release  # If building from source (Have to init again with new snp-release build)
 ./run build_base
 ./run build_guest --hb-branch release-v1.0
 ./run package_release
@@ -661,7 +662,7 @@ HyperBEAM OS provides a command-line interface for all operations:
 ```bash
 # Download and run a release
 ./run download_release --url https://releases.hyperbeam.com/v1.0.0/release.tar.gz
-./run start_release --data-disk /mnt/storage.img
+./run start_release --data-disk /mnt/storage.img # (Optional: --data-disk for non vol storage)
 ```
 
 #### **System Maintenance**
@@ -708,7 +709,7 @@ build_facade.build_guest_image(hb_branch="experimental")
 vm_facade.create_and_start_vm(data_disk="/path/to/disk.img")
 ```
 
-See `examples/FACADE_GUIDE.md` for comprehensive facade documentation.
+See [FACADE_GUIDE](examples/FACADE_GUIDE.md) for comprehensive facade documentation.
 
 ---
 
@@ -718,8 +719,7 @@ See `examples/FACADE_GUIDE.md` for comprehensive facade documentation.
 hb-os/
 ├── 📂 src/                           # Main source code
 │   ├── 📂 cli/                       # Command Line Interface
-│   │   ├── cli_handler.py            # Argument parsing and command dispatch
-│   │   └── __init__.py
+│   │   └── cli_handler.py            # Argument parsing and command dispatch
 │   ├── 📂 core/                      # Core business logic
 │   │   ├── build_orchestrator.py     # Build workflow coordination
 │   │   ├── build_content.py          # Guest content building
@@ -752,7 +752,7 @@ hb-os/
 │       └── utils.py                  # Common utilities and error handling
 ├── 📂 config/                        # Configuration management
 │   ├── config.py                     # Type-safe configuration classes
-│   └── template-user-data            # Cloud-init template
+│   └── 
 ├── 📂 examples/                      # Usage examples and documentation
 │   ├── FACADE_GUIDE.md              # Comprehensive facade usage guide
 │   ├── example_facade_usage.py      # Facade system examples
@@ -763,7 +763,8 @@ hb-os/
 │   ├── initramfs.Dockerfile         # Initramfs build container
 │   ├── init.sh                      # VM initialization script
 │   ├── hyperbeam.service            # HyperBEAM systemd service
-│   └── cu.service                   # Compute unit service
+│   ├── cu.service                   # Compute unit service
+│   └── template-user-data            # Cloud-init template
 ├── 📂 scripts/                       # Build and setup scripts
 │   ├── base_setup.sh               # Base system setup
 │   ├── gpu_passthrough.sh          # GPU passthrough configuration
