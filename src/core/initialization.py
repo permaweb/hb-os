@@ -44,7 +44,6 @@ def init(snp_release_path: Optional[str] = None) -> None:
         elif os.path.isdir(snp_release_path):
             # Copy provided directory
             print("Copying provided SNP release directory...")
-            import shutil
             dest_dir = os.path.join(config.dir.build, "snp-release")
             if os.path.exists(dest_dir):
                 shutil.rmtree(dest_dir)

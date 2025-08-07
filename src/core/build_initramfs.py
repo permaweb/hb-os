@@ -2,6 +2,7 @@
 import os
 import sys
 import argparse
+import shutil
 from typing import Optional
 from pathlib import Path
 from src.utils import (
@@ -104,7 +105,6 @@ def copy_initramfs_components(kernel_dir: str, build_dir: str, init_script: str,
     # Copy the init script.
     print("Copying init script..")
     dest_init = os.path.join(initrd_dir, "init")
-    import shutil
     shutil.copy2(init_script, dest_init)
 
     # If an init patch is provided (and exists), patch the init script.

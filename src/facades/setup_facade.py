@@ -4,7 +4,8 @@ Setup Facade Implementation.
 
 This facade simplifies environment setup and initialization operations.
 """
-
+import requests
+import shutil
 import os
 from typing import Optional
 from src.core.facade_interfaces import ISetupFacade
@@ -144,8 +145,7 @@ class SetupFacade(ISetupFacade):
     
     def _setup_snp_release(self) -> None:
         """Download and extract SNP release."""
-        import requests
-        import shutil
+
         
         tarball = os.path.join(self._config.build_dir, "snp-release.tar.gz")
         url = "https://github.com/SNPGuard/snp-guard/releases/download/v0.1.2/snp-release.tar.gz"

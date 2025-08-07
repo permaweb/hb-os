@@ -9,7 +9,7 @@ Provides a clean API for the SNP build functionality.
 import os
 from typing import Dict, List, Optional, Any
 from pathlib import Path
-
+import shutil
 from src.core.snp_builder import SNPBuildOrchestrator, SNPComponentBuilder, SNPBuildError
 from src.utils.snp_config import SNPConfigManager
 from src.utils import HyperBeamError
@@ -57,7 +57,6 @@ class SNPComponentService:
                     package_name = os.path.basename(package_path)
                     dest_path = os.path.join(output_dir, package_name)
                     
-                    import shutil
                     shutil.copy2(package_path, dest_path)
                     copied_packages.append(dest_path)
                 
@@ -261,7 +260,6 @@ class SNPComponentService:
         
         for tool in required_tools:
             try:
-                import shutil
                 tool_path = shutil.which(tool)
                 validation["dependencies"][tool] = {
                     "available": tool_path is not None,
@@ -310,7 +308,6 @@ class SNPComponentService:
             dir_path = build_path / dir_name
             if dir_path.exists():
                 print(f"Cleaning {dir_path}")
-                import shutil
                 shutil.rmtree(dir_path)
         
         # Files to clean
