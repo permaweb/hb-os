@@ -54,9 +54,8 @@ def init(snp_release_path: Optional[str] = None) -> None:
     else:
         # Download and extract default SNP release tarball.
         tarball = os.path.join(config.dir.build, "snp-release.tar.gz")
-        # https://github.com/permaweb/snp-guard/releases/tag/v6.9.0
-        print("Downloading SNP release 6.9...")
-        url = "https://arweave.net/GnnSmMQlszX0lMa48KV92nX5ug-u2qiO7RxCdssxsU8" # SNP Release 6.9 
+        print("Downloading SNP release...")
+        url = config.snp.release_url
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
             with open(tarball, "wb") as f:
@@ -65,7 +64,7 @@ def init(snp_release_path: Optional[str] = None) -> None:
         run_command(f"rm {tarball}")
     
     # Download the GPU admin tools
-    run_command(f"cd {config.dir.build} && git clone https://github.com/permaweb/gpu-admin-tools && cd .. ")
+    run_command(f"cd {config.dir.build} && git clone {config.build.gpu_admin_tools_repo} && cd .. ")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -84,6 +83,8 @@ def init(snp_release_path: Optional[str] = None) -> None:
     run_command("cargo build --manifest-path=tools/digest_calc/Cargo.toml")
     run_command(f"cp ./tools/digest_calc/target/debug/digest_calc {config.dir.bin}")
     setup_host()
+    if config.build.enable_gpu:
+        setup_gpu()
 
 
 def setup_host() -> None:

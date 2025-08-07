@@ -15,7 +15,7 @@ CPU_MODEL="EPYC-v4"
 MONITOR_PATH=monitor
 QEMU_CONSOLE_LOG=$(pwd)/stdout.log
 CERTS_PATH=
-USE_GPU="0"
+ENABLE_GPU="0"
 ENABLE_TPM="0"
 TPM_PATH="/dev/tpm0"
 CLEAR_TPM="1"
@@ -67,7 +67,7 @@ usage() {
     echo " -qemu-port                 Port for QEMU monitor (default: 4444)"
     echo " -debug                     Enable debug mode"
     echo " -data-disk PATH     Path to the additional data volume (e.g., /path/to/data-volume.img)"
-    echo " -gpu               Enable GPU passthrough and GPU driver installation"
+    echo " -enable-gpu               Enable GPU passthrough and GPU driver installation"
     echo " -enable-tpm        Enable TPM passthrough (default: disabled)"
     echo " -clear-tpm         Clear TPM ownership before starting (requires tpm2-tools)"
     exit 1
@@ -249,8 +249,8 @@ while [ -n "$1" ]; do
         DATA_DISK="$2"
         shift
         ;;
-    -gpu)
-        USE_GPU="$2"
+    -enable-gpu)
+        ENABLE_GPU="$2"
         shift
         ;;
     -enable-tpm)
@@ -452,7 +452,7 @@ for ((i = 0; i < ${#DISKS[@]}; i++)); do
 done
 
 # add GPU passthrough parameters
-if [ "$USE_GPU" = "1" ]; then
+if [ "$ENABLE_GPU" = "1" ]; then
     NVIDIA_GPU=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
 
     if [ -n "$NVIDIA_GPU" ]; then
@@ -468,7 +468,7 @@ fi
 
 # If this is SEV guest then add the encryption device objects to enable support
 if [ ${SEV} = "1" ]; then
-    if [ "$USE_GPU" = "1" ] && [ -n "$NVIDIA_GPU" ]; then
+    if [ "$ENABLE_GPU" = "1" ] && [ -n "$NVIDIA_GPU" ]; then
         add_opts "-machine confidential-guest-support=sev0,vmport=off"
     else
         add_opts "-machine memory-encryption=sev0,vmport=off"
@@ -722,7 +722,7 @@ else
     sshpass -p "$HB_PASSWORD" scp -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P 2222 scripts/base_setup.sh hb@localhost:
 
     # Run the setup script on the guest
-    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh '$USE_GPU'"
+    sshpass -p "$HB_PASSWORD" ssh -t -o ConnectTimeout=240 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 hb@localhost "echo '$HB_PASSWORD' | sudo -S bash ./base_setup.sh '$ENABLE_GPU'"
 fi
 
 # restore the mapping

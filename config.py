@@ -58,10 +58,14 @@ class BuildConfig:
     debug: bool = False
     enable_kvm: bool = True
     enable_tpm: bool = True
+    enable_gpu: bool = False  # Enable GPU support
     
     # Image names
     base_image: str = "base.qcow2"
     guest_image: str = "guest.qcow2"
+    
+    # GPU admin tools repository
+    gpu_admin_tools_repo: str = "https://github.com/permaweb/gpu-admin-tools"
 
 
 @dataclass
@@ -72,7 +76,6 @@ class VMConfig:
     host_cpu_family: str = "Genoa"
     vcpu_count: int = 12
     memory_mb: int = 204800
-    gpu: bool = False  # Enable GPU support
     
     # SEV-SNP Guest Policy Settings
     guest_features: str = "0x1"
@@ -119,9 +122,7 @@ class QEMUConfig:
 class SNPConfig:
     """SNP package building configuration."""
     
-    use_stable_snapshots: bool = False
-    amdsev_repo: str = "https://github.com/permaweb/AMDSEV.git"
-    amdsev_branch: str = "snp-cc"
+    release_url: str = "https://github.com/permaweb/hb-os/releases/download/v1.0.0/snp-release.tar.gz"
     dependencies: List[str] = field(default_factory=lambda: [
         "build-essential", "git", "python3", "python3-venv", "ninja-build",
         "libglib2.0-dev", "uuid-dev", "iasl", "nasm", "python-is-python3",
@@ -281,9 +282,9 @@ class HyperBeamConfig:
         return "1" if self.build.enable_tpm else "0"
     
     @property
-    def gpu(self) -> str:
+    def enable_gpu(self) -> str:
         """GPU enable flag as string (for backward compatibility)."""
-        return "1" if self.vm.gpu else "0"
+        return "1" if self.build.enable_gpu else "0"
     
     @property
     def vcpu_count(self) -> int:
@@ -397,21 +398,6 @@ class HyperBeamConfig:
     def qemu_extra_params(self) -> str:
         """Extra QEMU parameters."""
         return f"-bios {self.qemu_ovmf} -policy {self.guest_policy}"
-    
-    @property
-    def snp_use_stable_snapshots(self) -> bool:
-        """Whether to use stable SNP snapshots."""
-        return self.snp.use_stable_snapshots
-    
-    @property
-    def snp_amdsev_repo(self) -> str:
-        """SNP AMDSEV repository URL."""
-        return self.snp.amdsev_repo
-    
-    @property
-    def snp_amdsev_branch(self) -> str:
-        """SNP AMDSEV branch."""
-        return self.snp.amdsev_branch
     
     @property
     def snp_dependencies(self) -> List[str]:

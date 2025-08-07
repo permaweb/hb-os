@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check for NVIDIA GPU parameter (empty means no GPU)
-USE_GPU=${1:-""}
+ENABLE_GPU=${1:-""}
 
 # Install Node.js
 echo "Installing Node.js..."
@@ -17,7 +17,7 @@ sudo dpkg -i linux-*.deb
 rm -rf linux-*.deb
 
 # Install Nvidia driver only if NVIDIA GPU is detected
-if [ "$USE_GPU" = "1" ]; then
+if [ "$ENABLE_GPU" = "1" ]; then
     echo "GPU enabled, installing NVIDIA drivers..."
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
