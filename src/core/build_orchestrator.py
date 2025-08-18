@@ -153,7 +153,8 @@ def build_content() -> None:
         out_dir=config.dir.content, 
         dockerfile=config.content_dockerfile, 
         hb_branch=config.hb_branch,
-        ao_branch=config.ao_branch
+        ao_branch=config.ao_branch,
+        debug=config.build.debug
     )
 
 

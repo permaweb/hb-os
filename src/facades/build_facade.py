@@ -245,7 +245,8 @@ class BuildFacade(IBuildFacade):
             out_dir=self._config.content_dir, 
             dockerfile=self._config.config.content_dockerfile, 
             hb_branch=effective_hb_branch,
-            ao_branch=effective_ao_branch
+            ao_branch=effective_ao_branch,
+            debug=self._config.debug
         )
     
     def _setup_verity(self) -> None:

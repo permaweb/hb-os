@@ -467,12 +467,13 @@ class GuestSetup:
     
     def _copy_hyperbeam_components(self):
         """Copy HyperBEAM components to the destination filesystem."""
-        hb_src = os.path.join(self.build_dir, "content", "hb")
-        hb_dst = os.path.join(self.dst_folder, "root")
-        subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
-                        hb_src, hb_dst], check=True)
-        
         if self.debug == "0":
+            print("Copying HyperBEAM components...")
+            hb_src = os.path.join(self.build_dir, "content", "hb")
+            hb_dst = os.path.join(self.dst_folder, "root")
+            subprocess.run(["sudo", "rsync", "-axHAWXS", "--numeric-ids", "--info=progress2",
+                            hb_src, hb_dst], check=True)
+            
             print("Copying HyperBEAM service...")
             hb_service_src = os.path.join(self.build_dir, "content", "hyperbeam.service")
             hb_service_dst = os.path.join(self.dst_folder, "etc", "systemd", "system", "hyperbeam.service")
@@ -482,7 +483,7 @@ class GuestSetup:
             print("Enabling HyperBEAM service...")
             subprocess.run(["sudo", "chroot", self.dst_folder, "systemctl", "enable", "hyperbeam.service"], check=True)
         else:
-            print("Debug mode enabled. Skipping HyperBEAM service copy.")
+            print("🐛 Debug mode enabled. Skipping HyperBEAM components and service copy.")
     
     def _compute_hash_tree(self):
         """Compute the dm-verity hash tree and return the root hash."""

@@ -46,46 +46,28 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && \
 # Set up build directories
 RUN mkdir -p /build /release
 
-# Clone the subdirectory "servers/cu" from the "permaweb/ao" repository using sparse checkout
-# RUN git clone --filter=blob:none --no-checkout https://github.com/permaweb/ao.git /build/ao && \
-#     cd /build/ao && \
-#     git sparse-checkout init --cone && \
-#     git sparse-checkout set servers/cu && \
-#     git checkout <AO_BRANCH> && \
-#     cp -r servers/cu /release/cu
-
-# Copy the cu.env file to the release directory
-# COPY ./cu/cu.env /release/cu.env
-
-# Copy the cu.env file to the release directory
-# RUN cp /release/cu.env /release/cu/.env
-
-# # Generate a wallet and inject it into the cu.env file
-# RUN WALLET=$(npx --yes @permaweb/wallet) && \
-#     cp /release/cu.env /release/cu/.env && \
-#     echo "WALLET=${WALLET}" >> /release/cu/.env
-
-# Copy CU service file to /release
-# COPY ./cu/cu.service /release
-
 # Add cache buster to prevent git clone caching
 ARG CACHEBUST=1
 
-# Clone the HyperBEAM repository
-RUN git clone --depth=1 --branch <HB_BRANCH> https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM
+# Add build argument to control HyperBEAM building
+ARG SKIP_HYPERBEAM=false
 
-# Copy the config flat configurations to HyperBEAM Dir before building release.
-COPY ./hyperbeam/config.flat /build/HyperBEAM/config.flat
-
-# Compile the application code using Rebar3
-RUN cd /build/HyperBEAM && \
-    rebar3 as genesis_wasm release && \
-    cp -r _build/genesis_wasm/rel/hb /release/hb && \
-    mkdir -p /release/hb/test && \
-    cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd
-
-# Copy the service file to /release
-COPY ./hyperbeam/hyperbeam.service /release
+# Conditionally build HyperBEAM (skip entirely in debug mode)
+COPY ./hyperbeam/hyperbeam.service ./hyperbeam/config.flat /tmp/
+RUN if [ "$SKIP_HYPERBEAM" != "true" ]; then \
+        echo "Building HyperBEAM..."; \
+        git clone --depth=1 --branch <HB_BRANCH> https://github.com/permaweb/HyperBEAM.git /build/HyperBEAM && \
+        cp /tmp/config.flat /build/HyperBEAM/config.flat && \
+        echo "Compiling HyperBEAM..." && \
+        cd /build/HyperBEAM && \
+        rebar3 as genesis_wasm release && \
+        cp -r _build/genesis_wasm/rel/hb /release/hb && \
+        mkdir -p /release/hb/test && \
+        cp test/OVMF-1.55.fd /release/hb/test/OVMF-1.55.fd && \
+        cp /tmp/hyperbeam.service /release/hyperbeam.service; \
+    else \
+        echo "🐛 Debug mode: Skipping HyperBEAM build entirely"; \
+    fi
 
 # Clean up build files
 RUN rm -rf /build

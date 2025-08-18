@@ -4,7 +4,7 @@ from typing import Optional
 from src.utils import remove_directory, ensure_directory
 from src.services import docker_service, DockerfileTemplateProcessor
 
-def build_guest_content(out_dir: str, dockerfile: str, hb_branch: str, ao_branch: str) -> None:
+def build_guest_content(out_dir: str, dockerfile: str, hb_branch: str, ao_branch: str, debug: bool = False) -> None:
     """
     Build guest content using Docker with proper resource management.
     
@@ -13,6 +13,7 @@ def build_guest_content(out_dir: str, dockerfile: str, hb_branch: str, ao_branch
         dockerfile (str): Path to the Dockerfile template
         hb_branch (str): HyperBEAM branch to use
         ao_branch (str): AO branch to use
+        debug (bool): Skip HyperBEAM building steps if True
         
     Raises:
         DockerError: If any Docker operation fails
@@ -36,8 +37,17 @@ def build_guest_content(out_dir: str, dockerfile: str, hb_branch: str, ao_branch
     }
     
     with DockerfileTemplateProcessor.managed_template(dockerfile, template_vars):
-        # Build Docker image with cache busting
-        build_args = {"CACHEBUST": str(int(time.time()))}
+        # Build Docker image with cache busting and debug flag
+        build_args = {
+            "CACHEBUST": str(int(time.time())),
+            "SKIP_HYPERBEAM": "true" if debug else "false"
+        }
+        
+        if debug:
+            print("🐛 Debug mode: Building Docker image with SKIP_HYPERBEAM=true")
+        else:
+            print("📦 Production mode: Building Docker image with SKIP_HYPERBEAM=false")
+        
         docker_service.build_image(context_dir, dockerfile_name, docker_img, build_args)
 
         # Run container and copy files with automatic cleanup
