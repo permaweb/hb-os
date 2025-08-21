@@ -175,6 +175,10 @@ def setup_verity() -> None:
 def run_setup() -> None:
     """
     Run QEMU with the base image configuration.
+    
+    Note: GPU parameters are NOT added here because this is called during build_base
+    when the system isn't ready for GPU passthrough yet. GPU parameters are only
+    added when running ./run start.
     """
     cmd = (QEMUCommandBuilder(config.qemu_launch_script)
            .args(*config.qemu_default_params.split())
@@ -184,6 +188,8 @@ def run_setup() -> None:
            .hb_port(config.qemu_hb_port)
            .qemu_port(config.qemu_port)
            .enable_kvm(config.enable_kvm)
+           # Note: GPU parameters are NOT added here for build_base
+           # They are only added in VMLauncher when running ./run start
            .build())
     
     run_command(cmd)

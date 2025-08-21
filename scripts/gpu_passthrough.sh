@@ -32,6 +32,22 @@ detect_nvidia_gpu() {
     return 0
 }
 
+# Function to enable VFIO-PCI driver
+enable_vfio_pci() {
+  echo "Enabling VFIO-PCI driver..."
+  if ! modprobe -v vfio vfio_iommu_type1 vfio_pci vfio_virqfd 2>&1; then
+    echo "Failed to modprobe VFIO drivers"
+    return 1
+  fi
+
+  if [ -d /sys/module/vfio_pci ] || lsmod | grep -q '^vfio_pci'; then
+    echo "VFIO-PCI driver present"
+    return 0
+  fi
+
+  echo "VFIO-PCI driver not present after modprobe"
+  return 1
+}
 
 # Function to check if GPU is already bound to VFIO-PCI
 is_gpu_bound_to_vfio() {
@@ -151,6 +167,12 @@ show_gpu_status() {
     lspci -d 10de: | grep NVIDIA
 
     echo ""
+    echo "VFIO-PCI driver status:"
+    if lsmod | grep -q vfio_pci; then
+        echo "✓ VFIO-PCI driver is loaded"
+    else
+        echo "✗ VFIO-PCI driver is not loaded"
+    fi
 
     echo ""
     echo "VFIO-PCI bound devices:"
@@ -194,6 +216,8 @@ show_gpu_status() {
 setup_all_gpus() {
     echo "Setting up passthrough for all NVIDIA GPUs..."
 
+    # Enable VFIO-PCI driver
+    enable_vfio_pci
 
     # Process each GPU
     for gpu in $NVIDIA_GPUS; do

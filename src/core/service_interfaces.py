@@ -58,6 +58,9 @@ class IConfigurationService(Protocol):
     @property
     def enable_tpm(self) -> str: ...
     
+    @property
+    def enable_gpu(self) -> str: ...
+    
     # Network properties
     @property
     def network_vm_host(self) -> str: ...

@@ -17,6 +17,7 @@ QEMU_CONSOLE_LOG=$(pwd)/stdout.log
 CERTS_PATH=
 ENABLE_GPU="0"
 ENABLE_TPM="0"
+GPU_SETUP=${GPU_SETUP:-"0"}
 TPM_PATH="/dev/tpm0"
 CLEAR_TPM="1"
 
