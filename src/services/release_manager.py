@@ -10,9 +10,13 @@ import shutil
 import subprocess
 import tarfile
 import requests
+import urllib3
 from typing import Optional
 from config import config
 from src.utils import run_command
+
+# Disable SSL warnings for self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def package_release() -> None:
@@ -142,7 +146,10 @@ def download_release(url: str) -> None:
 
     tarball_path = os.path.join(os.getcwd(), "release_download.tar.gz")
     print(f"Downloading release from {url} ...")
-    with requests.get(url, stream=True) as r:
+    
+    # Disable SSL verification for self-signed certificates
+    # Note: This is acceptable for internal/development servers
+    with requests.get(url, stream=True, verify=False) as r:
         r.raise_for_status()
         with open(tarball_path, "wb") as f:
             shutil.copyfileobj(r.raw, f)
