@@ -451,6 +451,11 @@ class QEMUCommandBuilder(CommandBuilder):
         """Add data disk parameter."""
         return self.param("data-disk", disk_path)
     
+    def enable_ssl(self, enable: Union[str, bool] = True) -> 'QEMUCommandBuilder':
+        """Add enableSSL parameter."""
+        ssl_val = enable if isinstance(enable, str) else ("1" if enable else "0")
+        return self.param("enableSSL", ssl_val)
+    
 
 
 

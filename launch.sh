@@ -19,6 +19,7 @@ ENABLE_GPU="0"
 ENABLE_TPM="0"
 TPM_PATH="/dev/tpm0"
 CLEAR_TPM="1"
+ENABLE_SSL="0"
 
 # linked to cli flag
 ENABLE_ID_BLOCK=
@@ -70,6 +71,7 @@ usage() {
     echo " -enable-gpu               Enable GPU passthrough and GPU driver installation"
     echo " -enable-tpm        Enable TPM passthrough (default: disabled)"
     echo " -clear-tpm         Clear TPM ownership before starting (requires tpm2-tools)"
+    echo " -enableSSL         Enable SSL port forwarding (443)"
     exit 1
 }
 
@@ -260,6 +262,10 @@ while [ -n "$1" ]; do
     -clear-tpm)
         CLEAR_TPM="1"
         ;;
+    -enableSSL)
+        ENABLE_SSL="$2"
+        shift
+        ;;
     *)
         usage
         ;;
@@ -423,7 +429,19 @@ fi
 if [ "$USE_DEFAULT_NETWORK" = "1" ]; then
     #echo "guest port 22 is fwd to host 8000..."
     #    add_opts "-netdev user,id=vmnic,hostfwd=tcp::8000-:22 -device e1000,netdev=vmnic,romfile="
-    add_opts " -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22,hostfwd=tcp:0.0.0.0:443-:443,hostfwd=tcp:0.0.0.0:8734-:8734,hostfwd=tcp:0.0.0.0:${HB_PORT}-:10000"
+    
+    # Build the network options with conditional SSL port forwarding
+    NETWORK_OPTS=" -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22"
+    
+    # Add SSL port forwarding if enabled
+    if [ "$ENABLE_SSL" = "1" ]; then
+        NETWORK_OPTS="${NETWORK_OPTS},hostfwd=tcp:0.0.0.0:443-:443"
+    fi
+    
+    # Add the remaining port forwards
+    NETWORK_OPTS="${NETWORK_OPTS},hostfwd=tcp:0.0.0.0:8734-:8734,hostfwd=tcp:0.0.0.0:${HB_PORT}-:10000"
+    
+    add_opts "$NETWORK_OPTS"
     #    add_opts "-netdev user,id=vmnic"
     add_opts " -device virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=vmnic,romfile="
 fi

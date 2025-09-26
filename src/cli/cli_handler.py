@@ -42,10 +42,12 @@ COMMANDS:
   start               Start the VM using QEMU with the guest image configuration
     Options:
       --data-disk PATH       Path to data disk image
+      --enableSSL            Enable SSL port forwarding (443)
   
   start_release       Start the VM in release mode using files from the release folder
     Options:
       --data-disk PATH       Path to data disk image
+      --enableSSL            Enable SSL port forwarding (443)
   
   package_release     Package all files needed for starting the VM into a release folder
   
@@ -64,7 +66,9 @@ EXAMPLES:
   ./run build_base
   ./run build_guest --hb-branch main --ao-branch v1.0
   ./run start --data-disk /path/to/disk.img
+  ./run start --data-disk /path/to/disk.img --enableSSL
   ./run start_release --data-disk /path/to/disk.img
+  ./run start_release --data-disk /path/to/disk.img --enableSSL
   ./run download_release --url https://example.com/release.tar.gz
     """
     print(help_text)
@@ -125,6 +129,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--data-disk",
         help="Path to data disk image"
     )
+    start_parser.add_argument(
+        "--enableSSL",
+        action="store_true",
+        help="Enable SSL port forwarding (443)"
+    )
 
     
     # Start release command
@@ -132,6 +141,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
     start_release_parser.add_argument(
         "--data-disk",
         help="Path to data disk image"
+    )
+    start_release_parser.add_argument(
+        "--enableSSL",
+        action="store_true",
+        help="Enable SSL port forwarding (443)"
     )
 
 
@@ -240,9 +254,9 @@ def dispatch_command(args: argparse.Namespace) -> None:
     elif args.target == "build_guest":
         build_guest_image()
     elif args.target == "start":
-        start_vm(args.data_disk)
+        start_vm(args.data_disk, getattr(args, 'enableSSL', False))
     elif args.target == "start_release":
-        start_release_vm(args.data_disk)
+        start_release_vm(args.data_disk, getattr(args, 'enableSSL', False))
     elif args.target == "package_release":
         package_release()
     elif args.target == "ssh":

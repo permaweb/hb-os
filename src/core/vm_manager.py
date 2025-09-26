@@ -33,7 +33,7 @@ class VMLauncher:
 
     
     def _build_complete_command(self, verity_image: str, verity_hash_tree: str, vm_config_file: str, 
-                               data_disk: Optional[str] = None) -> str:
+                               data_disk: Optional[str] = None, enable_ssl: bool = False) -> str:
         """
         Build the complete QEMU command with all parameters.
         
@@ -42,6 +42,7 @@ class VMLauncher:
             verity_hash_tree: Path to verity hash tree file
             vm_config_file: Path to VM configuration file
             data_disk: Data disk path
+            enable_ssl: Whether to enable SSL port forwarding
             
         Returns:
             Complete command string
@@ -62,10 +63,13 @@ class VMLauncher:
         if data_disk:
             builder.data_disk(data_disk)
         
+        if enable_ssl:
+            builder.enable_ssl(enable_ssl)
+        
         return builder.build()
     
     def launch(self, verity_image: str, verity_hash_tree: str, vm_config_file: str, 
-               data_disk: Optional[str] = None) -> None:
+               data_disk: Optional[str] = None, enable_ssl: bool = False) -> None:
         """
         Launch VM with specified configuration files and parameters.
         
@@ -74,9 +78,10 @@ class VMLauncher:
             verity_hash_tree: Path to verity hash tree file  
             vm_config_file: Path to VM configuration file
             data_disk: Path to data disk image
+            enable_ssl: Whether to enable SSL port forwarding
         """
         # Build complete command with all parameters
-        cmd = self._build_complete_command(verity_image, verity_hash_tree, vm_config_file, data_disk)
+        cmd = self._build_complete_command(verity_image, verity_hash_tree, vm_config_file, data_disk, enable_ssl)
         
         # Execute the command
         self._command_service.run_command(cmd)
@@ -97,26 +102,29 @@ class VMService(IVMService):
         self._config = config_service
         self._command_service = command_service
     
-    def start_vm(self, data_disk: Optional[str] = None) -> None:
+    def start_vm(self, data_disk: Optional[str] = None, enable_ssl: bool = False) -> None:
         """
         Run the VM using QEMU with the guest image configuration.
         
         Args:
             data_disk: Optional path to a data disk image
+            enable_ssl: Whether to enable SSL port forwarding
         """
         self._launcher.launch(
             verity_image=self._config.verity_image,
             verity_hash_tree=self._config.verity_hash_tree,
             vm_config_file=self._config.vm_config_file,
-            data_disk=data_disk
+            data_disk=data_disk,
+            enable_ssl=enable_ssl
         )
     
-    def start_release_vm(self, data_disk: Optional[str] = None) -> None:
+    def start_release_vm(self, data_disk: Optional[str] = None, enable_ssl: bool = False) -> None:
         """
         Start the VM in release mode, using files from the release folder.
         
         Args:
             data_disk: Optional path to a data disk image
+            enable_ssl: Whether to enable SSL port forwarding
         """
         release_dir = os.path.join(os.getcwd(), "release")
         verity_image = os.path.join(release_dir, os.path.basename(self._config.verity_image))
@@ -127,7 +135,8 @@ class VMService(IVMService):
             verity_image=verity_image,
             verity_hash_tree=verity_hash_tree,
             vm_config_file=vm_config_file,
-            data_disk=data_disk
+            data_disk=data_disk,
+            enable_ssl=enable_ssl
         )
     
     def ssh_vm(self) -> None:
@@ -138,30 +147,32 @@ class VMService(IVMService):
 
 
 # Legacy functions for backward compatibility - these will be removed later
-def start_vm(data_disk: Optional[str] = None) -> None:
+def start_vm(data_disk: Optional[str] = None, enable_ssl: bool = False) -> None:
     """
     Run the VM using QEMU with the guest image configuration.
     
     Args:
         data_disk: Optional path to a data disk image
+        enable_ssl: Whether to enable SSL port forwarding
     """
     from src.core.service_factory import get_service_container
     container = get_service_container()
     vm_service = container.resolve(IVMService)
-    vm_service.start_vm(data_disk=data_disk)
+    vm_service.start_vm(data_disk=data_disk, enable_ssl=enable_ssl)
 
 
-def start_release_vm(data_disk: Optional[str] = None) -> None:
+def start_release_vm(data_disk: Optional[str] = None, enable_ssl: bool = False) -> None:
     """
     Start the VM in release mode, using files from the release folder.
     
     Args:
         data_disk: Optional path to a data disk image
+        enable_ssl: Whether to enable SSL port forwarding
     """
     from src.core.service_factory import get_service_container
     container = get_service_container()
     vm_service = container.resolve(IVMService)
-    vm_service.start_release_vm(data_disk=data_disk)
+    vm_service.start_release_vm(data_disk=data_disk, enable_ssl=enable_ssl)
 
 
 def ssh_vm() -> None:
