@@ -334,6 +334,41 @@ sev_snp
 
 </details>
 
+#### **GPU Passthrough Verification**
+
+##### 1. Identify your GPU device ID using `lspci`:
+
+```bash
+lspci -nn | grep -i nvidia
+```
+
+<details>
+<summary>Expected Output</summary>
+
+```yaml
+c1:00.0 3D controller [0302]: NVIDIA Corporation Device [10de:2331] (rev a1)
+```
+
+</details>
+
+
+##### 2. Verify the GPU is bound to the `vfio-pci` driver:
+
+```bash
+lspci -nnk -d 10de:2331
+```
+<details>
+<summary>Expected Output</summary>
+
+```yaml
+c1:00.0 3D controller [0302]: NVIDIA Corporation Device [10de:2331] (rev a1)
+        Subsystem: NVIDIA Corporation Device [10de:1626]
+        Kernel driver in use: vfio-pci
+        Kernel modules: nvidiafb, nouveau
+```
+
+</details>
+
 #### **Complete Environment Validation**
 Use the `snphost` tool for comprehensive validation:
 

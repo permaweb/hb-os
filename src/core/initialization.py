@@ -63,7 +63,13 @@ def init(snp_release_path: Optional[str] = None) -> None:
         run_command(f"rm {tarball}")
     
     # Download the GPU admin tools
-    run_command(f"cd {config.dir.build} && git clone {config.build.gpu_admin_tools_repo} && cd .. ")
+    gpu_admin_tools_dir = os.path.join(config.dir.build, "gpu-admin-tools")
+    if os.path.exists(gpu_admin_tools_dir):
+        print("GPU admin tools already exist, updating...")
+        run_command(f"cd {gpu_admin_tools_dir} && git pull")
+    else:
+        print("Cloning GPU admin tools...")
+        run_command(f"cd {config.dir.build} && git clone {config.build.gpu_admin_tools_repo}")
 
     # Build attestation server binaries.
     run_command("cargo build --manifest-path=tools/attestation_server/Cargo.toml")
@@ -84,6 +90,7 @@ def init(snp_release_path: Optional[str] = None) -> None:
     setup_host()
     if config.build.enable_gpu:
         setup_gpu()
+        os.environ["GPU_SETUP"] = "1"
 
 
 def setup_host() -> None:

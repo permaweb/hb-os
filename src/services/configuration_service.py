@@ -71,6 +71,10 @@ class ConfigurationService(IConfigurationService):
     def enable_tpm(self) -> str:
         return self._config.enable_tpm
     
+    @property
+    def enable_gpu(self) -> str:
+        return self._config.enable_gpu
+    
     # Network properties
     @property
     def network_vm_host(self) -> str:

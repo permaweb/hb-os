@@ -57,8 +57,8 @@ class VMLauncher:
                    .qemu_port(self._config.config.qemu_port)
                    .debug(self._config.debug)
                    .enable_kvm(self._config.enable_kvm)
-                   .enable_tpm(self._config.enable_tpm))
-        
+                   .enable_tpm(self._config.enable_tpm)
+                   .enable_gpu(self._config.enable_gpu))
         # Add optional parameters conditionally
         if data_disk:
             builder.data_disk(data_disk)

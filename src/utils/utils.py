@@ -443,6 +443,11 @@ class QEMUCommandBuilder(CommandBuilder):
         tpm_val = enable if isinstance(enable, str) else ("1" if enable else "0")
         return self.param("enable-tpm", tpm_val)
     
+    def enable_gpu(self, enable: Union[str,bool] = True) -> 'QEMUCommandBuilder':
+        """Add enable-gpu parameter."""
+        gpu_val = enable if isinstance(enable, str) else ("1" if enable else "0")
+        return self.param("enable-gpu", gpu_val)
+    
     def policy(self, policy: str) -> 'QEMUCommandBuilder':
         """Add guest policy parameter."""
         return self.param("policy", policy)

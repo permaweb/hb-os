@@ -471,13 +471,35 @@ done
 
 # add GPU passthrough parameters
 if [ "$ENABLE_GPU" = "1" ]; then
-    NVIDIA_GPU=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
+    # Get all NVIDIA GPU addresses
+    NVIDIA_GPUS=$(lspci -d 10de: | awk '/NVIDIA/{print $1}')
 
-    if [ -n "$NVIDIA_GPU" ]; then
-        echo "GPU mode enabled, detected NVIDIA GPU: $NVIDIA_GPU"
-        add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
-        add_opts "-device vfio-pci,host=$NVIDIA_GPU,bus=pci.1"
-        add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+    if [ -n "$NVIDIA_GPUS" ]; then
+        echo "GPU mode enabled, detected NVIDIA GPUs:"
+        echo "$NVIDIA_GPUS"
+        
+        # For multiple GPUs, we need to use different approach
+        # Count total GPUs first
+        gpu_count=$(echo "$NVIDIA_GPUS" | wc -l)
+        echo "Found $gpu_count NVIDIA GPU(s)"
+        
+        if [ $gpu_count -eq 1 ]; then
+            # Single GPU - use original simple approach
+            NVIDIA_GPU="$NVIDIA_GPUS"
+            echo "Configuring single GPU: $NVIDIA_GPU"
+            add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
+            add_opts "-device vfio-pci,host=${NVIDIA_GPU},bus=pci.1"
+            add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+        else
+            # Multiple GPUs - use more conservative approach
+            echo "Multiple GPU configuration detected - using first GPU only for now"
+            echo "Multi-GPU passthrough requires more complex PCIe topology configuration"
+            NVIDIA_GPU=$(echo "$NVIDIA_GPUS" | head -n1)
+            echo "Configuring primary GPU: $NVIDIA_GPU"
+            add_opts "-device pcie-root-port,id=pci.1,bus=pcie.0"
+            add_opts "-device vfio-pci,host=${NVIDIA_GPU},bus=pci.1" 
+            add_opts "-fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=262144"
+        fi
     else
         echo "GPU mode enabled but no NVIDIA GPU detected"
         NVIDIA_GPU=""

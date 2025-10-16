@@ -34,18 +34,19 @@ detect_nvidia_gpu() {
 
 # Function to enable VFIO-PCI driver
 enable_vfio_pci() {
-    echo "Enabling VFIO-PCI driver..."
+  echo "Enabling VFIO-PCI driver..."
+  if ! modprobe -v vfio vfio_iommu_type1 vfio_pci vfio_virqfd 2>&1; then
+    echo "Failed to modprobe VFIO drivers"
+    return 1
+  fi
 
-    # Load VFIO-PCI module
-    modprobe vfio-pci
-
-    # Check if module loaded successfully
-    if lsmod | grep -q vfio_pci; then
-        echo "VFIO-PCI driver loaded successfully"
-    else
-        echo "Failed to load VFIO-PCI driver"
-        return 1
-    fi
+  if [ -d /sys/module/vfio_pci ] || lsmod | grep -q '^vfio_pci'; then
+    echo "VFIO-PCI driver present"
+    return 0
+  fi
+  
+  echo "VFIO-PCI driver not present after modprobe"
+  return 1
 }
 
 # Function to check if GPU is already bound to VFIO-PCI
