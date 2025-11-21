@@ -588,12 +588,12 @@ HyperBEAM OS provides a command-line interface for all operations:
 #### **VM Management Commands**
 - **`start`** - Start the VM with the current configuration
   ```bash
-  ./run start [--data-disk PATH]
+  ./run start [--data-disk PATH] [--enableSSL]
   ```
 
 - **`start_release`** - Start the VM using packaged release files
   ```bash
-  ./run start_release [--data-disk PATH]
+  ./run start_release [--data-disk PATH] [--enableSSL]
   ```
 
 - **`ssh`** - Connect to the running VM via SSH
