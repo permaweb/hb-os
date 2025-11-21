@@ -31,6 +31,7 @@ COMMANDS:
     Options:
       --snp-release PATH     Use pre-built SNP release directory or tarball (optional)
   setup_host          Set up the host system using the SNP release installer
+  setup_gpu           Setup the GPU CC for the host system
   build_snp_release   Build SNP release package (kernel, OVMF, QEMU) from source
   build_base          Build the base VM image (unpack kernel, build initramfs, create VM)
   
